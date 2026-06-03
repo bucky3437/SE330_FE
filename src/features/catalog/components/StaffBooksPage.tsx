@@ -37,6 +37,7 @@ export function StaffBooksPage({ mode = "staff", initialQuery = "" }: StaffBooks
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [pageInfo, setPageInfo] = useState({ page: 0, totalElements: 0, totalPages: 1 });
   const [selectedBookIds, setSelectedBookIds] = useState<string[]>([]);
   const [tableSort, setTableSort] = useState<{ key: BookSortKey; direction: SortDirection }>({
@@ -127,6 +128,18 @@ export function StaffBooksPage({ mode = "staff", initialQuery = "" }: StaffBooks
     }, 350);
   }
 
+  function handleResetFilters() {
+    if (filterTimerRef.current) {
+      window.clearTimeout(filterTimerRef.current);
+      filterTimerRef.current = null;
+    }
+
+    filterFormRef.current?.reset();
+    setShowAdvancedFilters(false);
+    setIsLoading(true);
+    setFilters(createStaffBookFilters());
+  }
+
   function handlePageChange(nextPage: number) {
     const page = Math.max(0, Math.min(nextPage, Math.max(pageInfo.totalPages - 1, 0)));
 
@@ -180,6 +193,14 @@ export function StaffBooksPage({ mode = "staff", initialQuery = "" }: StaffBooks
   const currentPage = Number(filters.page ?? pageInfo.page ?? 0);
   const totalPages = Math.max(pageInfo.totalPages || 1, 1);
   const paginationPages = buildPaginationPages(currentPage, totalPages);
+  const activeFilters = [
+    filters.q ? `Search: ${filters.q}` : "",
+    filters.author ? `Author: ${filters.author}` : "",
+    filters.categoryId ? `Category: ${categories.find((category) => entityIdOf(category) === filters.categoryId)?.name ?? filters.categoryId}` : "",
+    filters.availableOnly ? "Available only" : "",
+    filters.language ? `Language: ${filters.language}` : "",
+  ].filter(Boolean);
+  const hasAdvancedFilters = Boolean(filters.author || filters.language);
 
   function updateSort(key: BookSortKey) {
     setTableSort((current) => ({
@@ -239,52 +260,80 @@ export function StaffBooksPage({ mode = "staff", initialQuery = "" }: StaffBooks
         </>
       }
     >
-      <form ref={filterFormRef} onSubmit={handleSubmit} onChange={handleFilterChange} className="rounded-2xl border border-[#EDEDF2] bg-[#F8F9FA] p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(300px,2fr)_minmax(180px,1fr)_minmax(180px,1fr)_minmax(130px,0.8fr)_minmax(110px,0.6fr)_minmax(140px,0.8fr)] xl:items-center">
+      <form ref={filterFormRef} onSubmit={handleSubmit} onChange={handleFilterChange} className="rounded-2xl border border-[#E5E7EB] bg-white p-3 shadow-[0_12px_28px_rgba(17,24,39,0.06)]">
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(360px,2fr)_minmax(180px,0.85fr)_minmax(150px,0.75fr)_minmax(130px,0.65fr)_auto_auto] xl:items-center">
           <label className="relative min-w-0">
             <span className="sr-only">Search title, ISBN, or author</span>
-            <span aria-hidden="true" className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[#337AB7]">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#6B7280]">
+              <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
               </svg>
             </span>
-            <input name="q" defaultValue={normalizedInitialQuery} placeholder="Search title, ISBN, author..." className="h-14 w-full rounded-xl border border-[#D9DCE8] bg-white pl-12 pr-4 text-base outline-none transition focus:border-[#337AB7] focus:shadow-[0_0_0_4px_rgba(51,122,183,0.12)]" />
-          </label>
-          <label className="min-w-0">
-            <span className="sr-only">Search author options</span>
-            <input
-              name="author"
-              placeholder="Find author..."
-              className="h-14 w-full rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-[#337AB7] focus:shadow-[0_0_0_4px_rgba(51,122,183,0.12)]"
-            />
+            <input name="q" defaultValue={normalizedInitialQuery} placeholder="Search title, ISBN, author..." className="h-12 w-full rounded-xl border border-[#D9DCE8] bg-white pl-11 pr-4 text-base outline-none transition focus:border-black focus:shadow-[0_0_0_4px_rgba(0,0,0,0.08)]" />
           </label>
           <label className="min-w-0">
             <span className="sr-only">Filter by category</span>
-            <select name="categoryId" className="h-14 w-full rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-[#337AB7] focus:shadow-[0_0_0_4px_rgba(51,122,183,0.12)]">
-          <option value="">All categories</option>
-          {categories.map((category) => (
-            <option key={entityIdOf(category)} value={entityIdOf(category)}>
-              {category.name}
-            </option>
-          ))}
+            <select name="categoryId" className="h-12 w-full rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-black focus:shadow-[0_0_0_4px_rgba(0,0,0,0.08)]">
+              <option value="">All categories</option>
+              {categories.map((category) => (
+                <option key={entityIdOf(category)} value={entityIdOf(category)}>
+                  {category.name}
+                </option>
+              ))}
             </select>
-          </label>
-          <label className="min-w-0">
-            <span className="sr-only">Filter by language</span>
-            <input name="language" placeholder="Language" className="h-14 w-full rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-[#337AB7] focus:shadow-[0_0_0_4px_rgba(51,122,183,0.12)]" />
           </label>
           <label className="min-w-0">
             <span className="sr-only">Sort catalog</span>
-            <select name="sort" defaultValue="title,asc" className="h-14 w-full rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-[#337AB7] focus:shadow-[0_0_0_4px_rgba(51,122,183,0.12)]">
-          <option value="title,asc">A-Z</option>
-          <option value="publishedDate,desc">Newest</option>
+            <select name="sort" defaultValue="title,asc" className="h-12 w-full rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-black focus:shadow-[0_0_0_4px_rgba(0,0,0,0.08)]">
+              <option value="title,asc">A-Z</option>
+              <option value="publishedDate,desc">Newest</option>
             </select>
           </label>
-          <label className="flex h-14 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-bold text-[#000054]">
+          <label className="flex h-12 w-full min-w-0 items-center justify-center gap-2 rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-bold text-[#111827] transition hover:border-black">
               <input name="availableOnly" type="checkbox" className="h-4 w-4 accent-[#E60028]" />
               Available
           </label>
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters((current) => !current)}
+            className="h-12 rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-bold text-[#111827] transition hover:border-black hover:bg-[#F8F9FA]"
+          >
+            {showAdvancedFilters || hasAdvancedFilters ? "Hide filters" : "More filters"}
+          </button>
+          <button type="button" onClick={handleResetFilters} className="h-12 rounded-xl bg-black px-4 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#111827]">
+            Reset
+          </button>
         </div>
+
+        <div className={`${showAdvancedFilters || hasAdvancedFilters ? "mt-3 grid gap-2 rounded-xl border border-[#E5E7EB] bg-[#F8F9FA] p-3 md:grid-cols-2" : "hidden"}`}>
+          <label className="min-w-0">
+            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#6B7280]">Author</span>
+            <input
+              name="author"
+              placeholder="Find author..."
+              className="h-11 w-full rounded-lg border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-black focus:shadow-[0_0_0_4px_rgba(0,0,0,0.08)]"
+            />
+          </label>
+          <label className="min-w-0">
+            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-[#6B7280]">Language</span>
+            <input name="language" placeholder="Language" className="h-11 w-full rounded-lg border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-black focus:shadow-[0_0_0_4px_rgba(0,0,0,0.08)]" />
+          </label>
+        </div>
+
+        {activeFilters.length ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#EDEDF2] pt-3" aria-label="Active filters">
+            <div className="flex flex-wrap gap-2">
+              {activeFilters.map((filter) => (
+                <span key={filter} className="rounded-full border border-[#D9DCE8] bg-[#F8F9FA] px-3 py-1.5 text-xs font-bold text-[#111827]">
+                  {filter}
+                </span>
+              ))}
+            </div>
+            <button type="button" onClick={handleResetFilters} className="rounded-full px-3 py-1.5 text-xs font-bold text-[#E60028] transition hover:bg-[#E60028]/8">
+              Clear all
+            </button>
+          </div>
+        ) : null}
       </form>
 
       <div className="mt-5 grid gap-3">

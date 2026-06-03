@@ -6,12 +6,82 @@ import { useCallback, useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { createHold } from "@/features/circulation/services/circulationService";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { Book } from "../types/catalog.type";
 import { getBook } from "../services/catalogService";
 import { authorLabel, availabilityLabel, availabilityTone, categoryLabel } from "./catalogHelpers";
 import { CatalogShell, Notice } from "./CatalogShell";
 
+const copy = {
+  en: {
+    eyebrow: "Book detail",
+    fallbackTitle: "Library record",
+    description: "Inspect metadata and availability for this title.",
+    back: "Back to books",
+    loadError: "Could not load book details.",
+    loginFirst: "Please log in before placing a hold.",
+    holdPlaced: "Hold was placed. You can track it in My Holds.",
+    holdError: "Could not place hold.",
+    by: "by",
+    unknownAuthor: "Unknown author",
+    availability: "Availability",
+    copiesAvailable: "copies available",
+    availableTitle: "Copies are available on the shelf.",
+    availableBody: "Please visit the circulation desk to borrow this title. Holds are opened only when all copies are checked out.",
+    unavailableTitle: "All copies are currently checked out.",
+    unavailableBody: "Place a hold and we will reserve the next available copy for you.",
+    placingHold: "Placing hold...",
+    placeHold: "Place Hold",
+    myHolds: "My Holds",
+    verifying: "Availability is being verified. Please check with the circulation desk for the latest copy status.",
+    bibliographic: "Bibliographic details",
+    fields: {
+      publishedDate: "Published date",
+      language: "Language",
+      edition: "Edition",
+      totalCopies: "Total copies",
+      availableCopies: "Available copies",
+      category: "Category",
+    },
+    none: "N/A",
+  },
+  vi: {
+    eyebrow: "Chi tiết sách",
+    fallbackTitle: "Hồ sơ thư viện",
+    description: "Xem thông tin mô tả và tình trạng bản sao của đầu sách này.",
+    back: "Quay lại danh sách",
+    loadError: "Không thể tải chi tiết sách.",
+    loginFirst: "Vui lòng đăng nhập trước khi đặt giữ sách.",
+    holdPlaced: "Đã đặt giữ sách. Bạn có thể theo dõi trong Lượt đặt giữ.",
+    holdError: "Không thể đặt giữ sách.",
+    by: "tác giả",
+    unknownAuthor: "Chưa rõ tác giả",
+    availability: "Tình trạng",
+    copiesAvailable: "bản có sẵn",
+    availableTitle: "Sách đang có sẵn trên kệ.",
+    availableBody: "Vui lòng đến quầy lưu thông để mượn đầu sách này. Chỉ mở đặt giữ khi tất cả bản sao đang được mượn.",
+    unavailableTitle: "Tất cả bản sao hiện đang được mượn.",
+    unavailableBody: "Hãy đặt giữ, thư viện sẽ dành bản sao tiếp theo cho bạn khi sách được trả.",
+    placingHold: "Đang đặt giữ...",
+    placeHold: "Đặt giữ",
+    myHolds: "Lượt đặt giữ",
+    verifying: "Tình trạng bản sao đang được kiểm tra. Vui lòng hỏi quầy lưu thông để biết thông tin mới nhất.",
+    bibliographic: "Thông tin thư mục",
+    fields: {
+      publishedDate: "Ngày xuất bản",
+      language: "Ngôn ngữ",
+      edition: "Ấn bản",
+      totalCopies: "Tổng bản sao",
+      availableCopies: "Bản có sẵn",
+      category: "Danh mục",
+    },
+    none: "Không có",
+  },
+};
+
 export function BookDetailPage() {
+  const { locale } = useLanguage();
+  const text = copy[locale];
   const params = useParams<{ bookId: string }>();
   const { accessToken, isAuthenticated, refresh } = useAuth();
   const [book, setBook] = useState<Book | null>(null);
@@ -35,7 +105,7 @@ export function BookDetailPage() {
       })
       .catch((fetchError) => {
         if (!isMounted) return;
-        setError(fetchError instanceof Error ? fetchError.message : "Could not load book details.");
+        setError(fetchError instanceof Error ? fetchError.message : text.loadError);
       })
       .finally(() => {
         if (isMounted) {
@@ -46,23 +116,23 @@ export function BookDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [params.bookId]);
+  }, [params.bookId, text.loadError]);
 
   async function handlePlaceHold() {
     if (isPlacingHold) return;
 
     if (!isAuthenticated) {
-      setError("Please log in before placing a hold.");
+      setError(text.loginFirst);
       return;
     }
 
     try {
       setIsPlacingHold(true);
       await createHold(params.bookId, accessToken, refreshAccessToken);
-      setMessage("Hold was placed. You can track it in My Holds.");
+      setMessage(text.holdPlaced);
       setError("");
     } catch (holdError) {
-      setError(holdError instanceof Error ? holdError.message : "Could not place hold.");
+      setError(holdError instanceof Error ? holdError.message : text.holdError);
     } finally {
       setIsPlacingHold(false);
     }
@@ -70,10 +140,10 @@ export function BookDetailPage() {
 
   return (
     <CatalogShell
-      eyebrow="Book detail"
-      title={book?.title ?? "Library record"}
-      description="Inspect metadata and availability for this title."
-      actions={<AnimatedActionLink href="/books">Back to books</AnimatedActionLink>}
+      eyebrow={text.eyebrow}
+      title={book?.title ?? text.fallbackTitle}
+      description={text.description}
+      actions={<AnimatedActionLink href="/books">{text.back}</AnimatedActionLink>}
     >
       {message && (
         <div className="mb-5">
@@ -95,29 +165,31 @@ export function BookDetailPage() {
               {categoryLabel(book.category)}
             </span>
             <h2 className="mt-5 font-serif text-3xl font-bold text-[#000054]">{book.title}</h2>
-            <p className="mt-3 text-[#333333]">by {(book.authors ?? []).map(authorLabel).join(", ") || "Unknown author"}</p>
+            <p className="mt-3 text-[#333333]">
+              {text.by} {(book.authors ?? []).map(authorLabel).join(", ") || text.unknownAuthor}
+            </p>
             <div className="mt-6 inline-flex rounded-full bg-white px-4 py-2 text-sm font-bold text-[#E60028] ring-1 ring-[#EDEDF2]">
               ISBN {book.isbn}
             </div>
           </section>
 
           <section className="rounded-xl border border-[#EDEDF2] bg-white p-6">
-            <h3 className="text-lg font-bold text-[#000054]">Availability</h3>
+            <h3 className="text-lg font-bold text-[#000054]">{text.availability}</h3>
             <span className={`mt-4 inline-flex rounded-full px-4 py-2 text-sm font-bold ring-1 ${availabilityTone(book)}`}>
-              {availabilityLabel(book)} copies available
+              {availabilityLabel(book)} {text.copiesAvailable}
             </span>
             {hasAvailableCopies ? (
               <div className="mt-5 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-sm leading-6 text-emerald-900 shadow-sm">
-                <p className="font-bold">Copies are available on the shelf.</p>
+                <p className="font-bold">{text.availableTitle}</p>
                 <p className="mt-1 text-emerald-800">
-                  Please visit the circulation desk to borrow this title. Holds are opened only when all copies are checked out.
+                  {text.availableBody}
                 </p>
               </div>
             ) : canPlaceHold ? (
               <div className="mt-5 rounded-2xl border border-[#D9DCE8] bg-[#F8F9FA] p-5">
-                <p className="text-sm font-bold text-[#000054]">All copies are currently checked out.</p>
+                <p className="text-sm font-bold text-[#000054]">{text.unavailableTitle}</p>
                 <p className="mt-1 text-sm leading-6 text-[#333333]">
-                  Place a hold and we will reserve the next available copy for you.
+                  {text.unavailableBody}
                 </p>
                 <button
                   type="button"
@@ -129,11 +201,11 @@ export function BookDetailPage() {
                   {isPlacingHold ? (
                     <span className="relative inline-flex items-center gap-2">
                       <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/60 border-t-white" />
-                      Placing hold...
+                      {text.placingHold}
                     </span>
                   ) : (
                     <span className="relative inline-flex items-center gap-2">
-                      Place Hold
+                      {text.placeHold}
                       <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
                         →
                       </span>
@@ -144,7 +216,7 @@ export function BookDetailPage() {
                   href="/user/holds"
                   className="group mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#D9DCE8] bg-white px-5 py-3 text-sm font-bold text-[#000054] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[#337AB7] hover:text-[#E60028] hover:shadow-lg hover:shadow-[#000054]/10 active:translate-y-0 active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-[#337AB7]/20"
                 >
-                  My Holds
+                  {text.myHolds}
                   <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
                     →
                   </span>
@@ -152,21 +224,21 @@ export function BookDetailPage() {
               </div>
             ) : (
               <div className="mt-5 rounded-2xl border border-[#D9DCE8] bg-[#F8F9FA] p-5 text-sm leading-6 text-[#333333]">
-                Availability is being verified. Please check with the circulation desk for the latest copy status.
+                {text.verifying}
               </div>
             )}
           </section>
 
           <section className="rounded-xl border border-[#EDEDF2] bg-white p-6 lg:col-span-2">
-            <h3 className="text-lg font-bold text-[#000054]">Bibliographic details</h3>
+            <h3 className="text-lg font-bold text-[#000054]">{text.bibliographic}</h3>
             <dl className="mt-5 grid gap-4 md:grid-cols-2">
               {[
-                ["Published date", book.publishedDate || "N/A"],
-                ["Language", book.language || "N/A"],
-                ["Edition", book.edition || "N/A"],
-                ["Total copies", String(book.totalCopies ?? 0)],
-                ["Available copies", String(book.availableCopies ?? 0)],
-                ["Category", categoryLabel(book.category)],
+                [text.fields.publishedDate, book.publishedDate || text.none],
+                [text.fields.language, book.language || text.none],
+                [text.fields.edition, book.edition || text.none],
+                [text.fields.totalCopies, String(book.totalCopies ?? 0)],
+                [text.fields.availableCopies, String(book.availableCopies ?? 0)],
+                [text.fields.category, categoryLabel(book.category)],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg border border-[#EDEDF2] bg-[#F8F9FA] p-4">
                   <dt className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">{label}</dt>

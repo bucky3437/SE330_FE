@@ -4,11 +4,59 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
+
+const profileCopy = {
+  en: {
+    authenticating: "Authenticating",
+    checkingSession: "Checking your session...",
+    eyebrow: "My profile",
+    fallbackName: "The Athenaeum member profile",
+    labels: {
+      email: "Email",
+      role: "Role",
+      status: "Status",
+      borrowLimit: "Borrow limit",
+      fullName: "Full name",
+      phone: "Phone",
+    },
+    updateTitle: "Update profile",
+    updateDescription: "Only full name and phone can be changed here.",
+    saving: "Saving...",
+    saveChanges: "Save changes",
+    fullNameRequired: "Full name is required.",
+    updated: "Your profile was updated.",
+    updateFailed: "Could not update profile.",
+  },
+  vi: {
+    authenticating: "Xác thực",
+    checkingSession: "Đang kiểm tra phiên đăng nhập...",
+    eyebrow: "Hồ sơ của tôi",
+    fallbackName: "Hồ sơ thành viên The Athenaeum",
+    labels: {
+      email: "Email",
+      role: "Vai trò",
+      status: "Trạng thái",
+      borrowLimit: "Giới hạn mượn",
+      fullName: "Họ và tên",
+      phone: "Số điện thoại",
+    },
+    updateTitle: "Cập nhật hồ sơ",
+    updateDescription: "Chỉ có thể thay đổi họ tên và số điện thoại tại đây.",
+    saving: "Đang lưu...",
+    saveChanges: "Lưu thay đổi",
+    fullNameRequired: "Vui lòng nhập họ và tên.",
+    updated: "Hồ sơ của bạn đã được cập nhật.",
+    updateFailed: "Không thể cập nhật hồ sơ.",
+  },
+};
 
 export function ProfilePanel() {
   const router = useRouter();
   const auth = useAuth();
+  const { locale } = useLanguage();
+  const copy = profileCopy[locale];
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -21,10 +69,10 @@ export function ProfilePanel() {
 
   if (auth.isInitializing || !auth.isAuthenticated) {
     return (
-      <main id="main-content" tabIndex={-1} className="flex min-h-screen items-center justify-center bg-[#F8F9FA] px-5 outline-none">
+      <main id="main-content" tabIndex={-1} className="flex min-h-dvh items-center justify-center bg-[#F8F9FA] px-5 outline-none">
         <div className="w-full max-w-md rounded-2xl border border-[#EDEDF2] bg-white p-8 text-center shadow-[0_24px_60px_rgba(17,24,39,0.14)]">
-          <p className="text-sm font-bold uppercase tracking-wide text-black/70">Authenticating</p>
-          <h1 className="mt-3 font-serif text-3xl font-bold text-black">Checking your session...</h1>
+          <p className="text-sm font-bold uppercase tracking-wide text-black/70">{copy.authenticating}</p>
+          <h1 className="mt-3 font-serif text-3xl font-bold text-black">{copy.checkingSession}</h1>
         </div>
       </main>
     );
@@ -37,17 +85,17 @@ export function ProfilePanel() {
     const phone = String(formData.get("phone") ?? "").trim();
 
     if (!fullName) {
-      setError("Full name is required.");
+      setError(copy.fullNameRequired);
       return;
     }
 
     setIsSaving(true);
     try {
       await auth.updateProfile({ fullName, phone });
-      setMessage("Your profile was updated.");
+      setMessage(copy.updated);
       setError("");
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Could not update profile.");
+      setError(submitError instanceof Error ? submitError.message : copy.updateFailed);
       setMessage("");
     } finally {
       setIsSaving(false);
@@ -55,21 +103,21 @@ export function ProfilePanel() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="min-h-dvh bg-[#F8F9FA]">
       <Navbar />
-      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-5xl px-5 pt-6 pb-12 outline-none lg:px-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto min-h-[calc(100dvh-4.5rem)] w-full max-w-5xl px-5 pt-6 pb-12 outline-none lg:px-8">
         <section className="rounded-2xl border border-[#EDEDF2] bg-white p-8 shadow-[0_24px_60px_rgba(17,24,39,0.1)]">
-          <p className="text-sm font-bold uppercase tracking-wide text-black/70">My profile</p>
+          <p className="text-sm font-bold uppercase tracking-wide text-black/70">{copy.eyebrow}</p>
           <h1 className="mt-3 font-serif text-4xl font-bold text-black">
-            {auth.currentUser?.fullName || "The Athenaeum member profile"}
+            {auth.currentUser?.fullName || copy.fallbackName}
           </h1>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {[
-              ["Email", auth.currentUser?.email ?? "-"],
-              ["Role", auth.currentUser?.role ?? "-"],
-              ["Status", auth.currentUser?.status ?? "-"],
-              ["Borrow limit", String(auth.currentUser?.maxBorrowLimit ?? "-")],
+              [copy.labels.email, auth.currentUser?.email ?? "-"],
+              [copy.labels.role, auth.currentUser?.role ?? "-"],
+              [copy.labels.status, auth.currentUser?.status ?? "-"],
+              [copy.labels.borrowLimit, String(auth.currentUser?.maxBorrowLimit ?? "-")],
             ].map(([label, value]) => (
               <div key={label} className="rounded-xl border border-[#EDEDF2] bg-[#F8F9FA] p-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-black/60">{label}</p>
@@ -81,21 +129,21 @@ export function ProfilePanel() {
           <form onSubmit={handleSubmit} className="mt-8 rounded-2xl border border-[#EDEDF2] bg-[#F8F9FA] p-5">
             <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
               <div>
-                <h2 className="text-xl font-bold text-black">Update profile</h2>
-                <p className="mt-1 text-sm leading-6 text-black/70">Only full name and phone can be changed here.</p>
+                <h2 className="text-xl font-bold text-black">{copy.updateTitle}</h2>
+                <p className="mt-1 text-sm leading-6 text-black/70">{copy.updateDescription}</p>
               </div>
               <button
                 type="submit"
                 disabled={isSaving}
                 className="rounded-full bg-[#E60028] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#E60028]/20 transition hover:-translate-y-0.5 disabled:opacity-60"
               >
-                {isSaving ? "Saving..." : "Save changes"}
+                {isSaving ? copy.saving : copy.saveChanges}
               </button>
             </div>
 
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               <label>
-                <span className="text-xs font-bold uppercase tracking-wide text-black">Full name</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-black">{copy.labels.fullName}</span>
                 <input
                   name="fullName"
                   defaultValue={auth.currentUser?.fullName ?? ""}
@@ -103,7 +151,7 @@ export function ProfilePanel() {
                 />
               </label>
               <label>
-                <span className="text-xs font-bold uppercase tracking-wide text-black">Phone</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-black">{copy.labels.phone}</span>
                 <input
                   name="phone"
                   defaultValue={auth.currentUser?.phone ?? ""}

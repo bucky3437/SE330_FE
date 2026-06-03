@@ -1,12 +1,14 @@
-export function formatDate(value?: string | null) {
+export function formatDate(value?: string | null, locale: "en" | "vi" = "en") {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" });
+  return date.toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US", { day: "2-digit", month: "short", year: "numeric" });
 }
 
-export function money(value?: number | null) {
-  return typeof value === "number" ? value.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "-";
+export function money(value?: number | null, locale: "en" | "vi" = "en") {
+  return typeof value === "number"
+    ? value.toLocaleString(locale === "vi" ? "vi-VN" : "en-US", { style: "currency", currency: "USD" })
+    : "-";
 }
 
 export function recordId(record: { id?: number; borrowId?: number; holdId?: number; fineId?: number }) {
@@ -15,4 +17,44 @@ export function recordId(record: { id?: number; borrowId?: number; holdId?: numb
 
 export function titleOf(record: { title?: string; bookTitle?: string }) {
   return record.bookTitle ?? record.title ?? "Untitled";
+}
+
+export function statusLabel(status?: string | null, locale: "en" | "vi" = "en") {
+  if (!status) return "-";
+
+  const normalizedStatus = status.trim().toUpperCase();
+  const labels: Record<"en" | "vi", Record<string, string>> = {
+    en: {
+      BORROWED: "Borrowed",
+      OVERDUE: "Overdue",
+      RETURNED: "Returned",
+      WAITING: "Waiting",
+      NOTIFIED: "Notified",
+      READY_FOR_PICKUP: "Ready for pickup",
+      FULFILLED: "Fulfilled",
+      EXPIRED: "Expired",
+      CANCELLED: "Cancelled",
+      CANCELED: "Cancelled",
+      PAID: "Paid",
+      UNPAID: "Unpaid",
+      WAIVED: "Waived",
+    },
+    vi: {
+      BORROWED: "Đang mượn",
+      OVERDUE: "Quá hạn",
+      RETURNED: "Đã trả",
+      WAITING: "Đang chờ",
+      NOTIFIED: "Đã thông báo",
+      READY_FOR_PICKUP: "Sẵn sàng nhận",
+      FULFILLED: "Đã nhận",
+      EXPIRED: "Đã hết hạn",
+      CANCELLED: "Đã hủy",
+      CANCELED: "Đã hủy",
+      PAID: "Đã thanh toán",
+      UNPAID: "Chưa thanh toán",
+      WAIVED: "Đã miễn",
+    },
+  };
+
+  return labels[locale][normalizedStatus] ?? status;
 }

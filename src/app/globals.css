@@ -601,6 +601,12 @@ a {
   background-color: rgba(17, 24, 39, 0.06);
 }
 
+[class~="hover:bg-[#000054]"]:hover,
+[class~="hover:bg-[#337AB7]"]:hover,
+[class~="hover:bg-[#090970]"]:hover {
+  background-color: #000000;
+}
+
 [class~="hover:border-[#000054]"]:hover,
 [class~="hover:border-[#337AB7]"]:hover,
 [class~="hover:border-[#000054]/35"]:hover,
@@ -608,6 +614,19 @@ a {
 [class~="hover:border-[#000054]/40"]:hover,
 [class~="hover:border-[#337AB7]/40"]:hover {
   border-color: #111827;
+}
+
+a[class~="rounded-full"][class~="border-[#D9DCE8]"]:hover,
+button[class~="rounded-full"][class~="border-[#D9DCE8]"]:not(:disabled):hover {
+  background-color: #111827;
+  border-color: #111827;
+  color: #ffffff;
+}
+
+[class~="hover:text-white"]:hover,
+.group:hover [class~="group-hover:text-white"] {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 [class~="focus:border-[#000054]"]:focus,

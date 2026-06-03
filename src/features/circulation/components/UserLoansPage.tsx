@@ -3,11 +3,45 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { CatalogShell, Notice, SecondaryAction } from "@/features/catalog/components/CatalogShell";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { BorrowRecord } from "../types/circulation.type";
 import { getMyBorrows, renewMyBorrow } from "../services/circulationService";
-import { formatDate, money, recordId, titleOf } from "./circulationHelpers";
+import { formatDate, money, recordId, statusLabel, titleOf } from "./circulationHelpers";
+
+const copy = {
+  en: {
+    eyebrow: "My loans",
+    title: "Current borrowed books",
+    description: "Track active loans, due dates, renewals, and any fines attached to your current borrowing.",
+    history: "Borrow history",
+    loading: "Loading your current loans...",
+    loadError: "Could not load loans.",
+    renewed: "Borrow was renewed.",
+    renewError: "Could not renew borrow.",
+    empty: "You do not have active loans.",
+    renewing: "Renewing...",
+    renew: "Renew",
+    headings: ["Book", "Barcode", "Borrowed", "Due", "Status", "Renewals", "Fine", "Action"],
+  },
+  vi: {
+    eyebrow: "Sách đang mượn",
+    title: "Các sách bạn đang mượn",
+    description: "Theo dõi sách đang mượn, hạn trả, lượt gia hạn và tiền phạt liên quan.",
+    history: "Lịch sử mượn",
+    loading: "Đang tải sách đang mượn...",
+    loadError: "Không thể tải danh sách mượn.",
+    renewed: "Đã gia hạn lượt mượn.",
+    renewError: "Không thể gia hạn lượt mượn.",
+    empty: "Bạn chưa có sách đang mượn.",
+    renewing: "Đang gia hạn...",
+    renew: "Gia hạn",
+    headings: ["Sách", "Mã bản sao", "Ngày mượn", "Hạn trả", "Trạng thái", "Gia hạn", "Phạt", "Thao tác"],
+  },
+};
 
 export function UserLoansPage() {
+  const { locale } = useLanguage();
+  const text = copy[locale];
   const { accessToken, refresh } = useAuth();
   const [loans, setLoans] = useState<BorrowRecord[]>([]);
   const [message, setMessage] = useState("");
@@ -26,7 +60,7 @@ export function UserLoansPage() {
         }
       })
       .catch((fetchError) => {
-        if (isMounted) setError(fetchError instanceof Error ? fetchError.message : "Could not load loans.");
+        if (isMounted) setError(fetchError instanceof Error ? fetchError.message : text.loadError);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -35,7 +69,7 @@ export function UserLoansPage() {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, message, refreshAccessToken]);
+  }, [accessToken, message, refreshAccessToken, text.loadError]);
 
   async function handleRenew(borrowId: string) {
     if (!borrowId || renewingBorrowId) return;
@@ -43,10 +77,10 @@ export function UserLoansPage() {
     setRenewingBorrowId(borrowId);
     try {
       await renewMyBorrow(borrowId, accessToken, refreshAccessToken);
-      setMessage("Borrow was renewed.");
+      setMessage(text.renewed);
       setError("");
     } catch (renewError) {
-      setError(renewError instanceof Error ? renewError.message : "Could not renew borrow.");
+      setError(renewError instanceof Error ? renewError.message : text.renewError);
     } finally {
       setRenewingBorrowId(null);
     }
@@ -55,13 +89,13 @@ export function UserLoansPage() {
   return (
     <CatalogShell
       protectedPage
-      eyebrow="My loans"
-      title="Current borrowed books"
-      description="Track active loans, due dates, renewals, and any fines attached to your current borrowing."
-      actions={<SecondaryAction href="/user/loans/history">Borrow history</SecondaryAction>}
+      eyebrow={text.eyebrow}
+      title={text.title}
+      description={text.description}
+      actions={<SecondaryAction href="/user/loans/history">{text.history}</SecondaryAction>}
     >
       <div className="grid gap-3">
-        {isLoading ? <Notice message="Loading your current loans..." /> : null}
+        {isLoading ? <Notice message={text.loading} /> : null}
         {message ? <Notice tone="success" message={message} /> : null}
         {error ? <Notice tone="error" message={error} /> : null}
       </div>
@@ -69,7 +103,7 @@ export function UserLoansPage() {
         <table className="w-full min-w-[980px] border-collapse bg-white text-left text-sm">
           <thead className="bg-[#000054] text-white">
             <tr>
-              {["Book", "Barcode", "Borrowed", "Due", "Status", "Renewals", "Fine", "Action"].map((heading) => (
+              {text.headings.map((heading) => (
                 <th key={heading} className="px-4 py-3 font-bold">{heading}</th>
               ))}
             </tr>
@@ -81,14 +115,14 @@ export function UserLoansPage() {
                 <tr key={id || loan.barcode} className="border-t border-[#EDEDF2]">
                   <td className="px-4 py-4 font-bold text-[#000054]">{titleOf(loan)}</td>
                   <td className="px-4 py-4">{loan.barcode ?? "-"}</td>
-                  <td className="px-4 py-4">{formatDate(loan.borrowedAt ?? loan.checkoutAt)}</td>
-                  <td className="px-4 py-4">{formatDate(loan.dueAt ?? loan.dueDate)}</td>
-                  <td className="px-4 py-4">{loan.status ?? "-"}</td>
+                  <td className="px-4 py-4">{formatDate(loan.borrowedAt ?? loan.checkoutAt, locale)}</td>
+                  <td className="px-4 py-4">{formatDate(loan.dueAt ?? loan.dueDate, locale)}</td>
+                  <td className="px-4 py-4">{statusLabel(loan.status, locale)}</td>
                   <td className="px-4 py-4">{loan.renewCount ?? 0} / {loan.maxRenewals ?? "-"}</td>
-                  <td className="px-4 py-4">{money(loan.fineAmount ?? loan.fine)}</td>
+                  <td className="px-4 py-4">{money(loan.fineAmount ?? loan.fine, locale)}</td>
                   <td className="px-4 py-4">
                     <button type="button" onClick={() => handleRenew(id)} disabled={!id || renewingBorrowId !== null} className="rounded-full border border-[#D9DCE8] px-3 py-1.5 font-bold text-[#000054] disabled:opacity-50">
-                      {renewingBorrowId === id ? "Renewing..." : "Renew"}
+                      {renewingBorrowId === id ? text.renewing : text.renew}
                     </button>
                   </td>
                 </tr>
@@ -97,7 +131,7 @@ export function UserLoansPage() {
           </tbody>
         </table>
       </div>
-      {!isLoading && !loans.length ? <div className="mt-5"><Notice message="You do not have active loans." /></div> : null}
+      {!isLoading && !loans.length ? <div className="mt-5"><Notice message={text.empty} /></div> : null}
     </CatalogShell>
   );
 }

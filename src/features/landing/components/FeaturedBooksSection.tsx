@@ -5,10 +5,40 @@ import { useEffect, useState } from "react";
 import { Book } from "@/features/catalog/types/catalog.type";
 import { getBooks } from "@/features/catalog/services/catalogService";
 import { authorLabel, availabilityLabel, bookIdOf, categoryLabel } from "@/features/catalog/components/catalogHelpers";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 
 const FEATURED_BOOKS_LIMIT = "3";
 
+const featuredCopy = {
+  en: {
+    title: "New and Featured Books",
+    description: "Recently highlighted resources from core library categories.",
+    viewAll: "View all books",
+    by: "by",
+    unknownAuthor: "Unknown author",
+    availability: "Availability",
+    language: "Language",
+    copies: "copies",
+    notAvailable: "N/A",
+    viewDetails: "View details",
+  },
+  vi: {
+    title: "Sách mới và nổi bật",
+    description: "Những tài nguyên mới được giới thiệu từ các danh mục chính của thư viện.",
+    viewAll: "Xem tất cả sách",
+    by: "bởi",
+    unknownAuthor: "Chưa rõ tác giả",
+    availability: "Tình trạng",
+    language: "Ngôn ngữ",
+    copies: "bản",
+    notAvailable: "Chưa có",
+    viewDetails: "Xem chi tiết",
+  },
+};
+
 export function FeaturedBooksSection() {
+  const { locale } = useLanguage();
+  const copy = featuredCopy[locale];
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,30 +72,30 @@ export function FeaturedBooksSection() {
       <div className="mx-auto max-w-7xl">
         <div className="animate-fade-up flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <h2 className="font-serif text-3xl font-bold text-[#000054]">New and Featured Books</h2>
+            <h2 className="font-serif text-3xl font-bold text-[#000054]">{copy.title}</h2>
             <p className="mt-3 max-w-2xl leading-7 text-[#333333]">
-              Recently highlighted resources from core library categories.
+              {copy.description}
             </p>
           </div>
           <Link
             href="/books"
             className="rounded-full border-2 border-[#D9DCE8] px-5 py-2.5 text-sm font-bold text-[#337AB7] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#337AB7] hover:bg-[#337AB7] hover:text-white hover:shadow-md hover:shadow-[#337AB7]/20"
           >
-            View all books
+            {copy.viewAll}
           </Link>
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-3">
           {isLoading
             ? Array.from({ length: 3 }).map((_, index) => <FeaturedBookSkeleton key={index} />)
-            : books.map((book, index) => <FeaturedBookCard key={bookIdOf(book) || book.isbn} book={book} index={index} />)}
+            : books.map((book, index) => <FeaturedBookCard key={bookIdOf(book) || book.isbn} book={book} index={index} copy={copy} />)}
         </div>
       </div>
     </section>
   );
 }
 
-function FeaturedBookCard({ book, index }: { book: Book; index: number }) {
+function FeaturedBookCard({ book, index, copy }: { book: Book; index: number; copy: typeof featuredCopy.en }) {
   const bookId = bookIdOf(book);
 
   return (
@@ -88,17 +118,17 @@ function FeaturedBookCard({ book, index }: { book: Book; index: number }) {
           {book.title}
         </h3>
         <p className="mt-2 text-sm text-[#333333]">
-          by {(book.authors ?? []).map(authorLabel).join(", ") || "Unknown author"}
+          {copy.by} {(book.authors ?? []).map(authorLabel).join(", ") || copy.unknownAuthor}
         </p>
 
         <dl className="mt-5 grid gap-3 text-sm">
           <div className="flex justify-between border-t border-[#EDEDF2] pt-3">
-            <dt className="font-semibold text-[#000054]">Availability</dt>
-            <dd className="font-medium text-[#337AB7]">{availabilityLabel(book)} copies</dd>
+            <dt className="font-semibold text-[#000054]">{copy.availability}</dt>
+            <dd className="font-medium text-[#337AB7]">{availabilityLabel(book)} {copy.copies}</dd>
           </div>
           <div className="flex justify-between border-t border-[#EDEDF2] pt-3">
-            <dt className="font-semibold text-[#000054]">Language</dt>
-            <dd>{book.language || "N/A"}</dd>
+            <dt className="font-semibold text-[#000054]">{copy.language}</dt>
+            <dd>{book.language || copy.notAvailable}</dd>
           </div>
         </dl>
 
@@ -106,7 +136,7 @@ function FeaturedBookCard({ book, index }: { book: Book; index: number }) {
           href={bookId ? `/books/${bookId}` : "/books"}
           className="mt-6 inline-flex w-full justify-center rounded-full border-2 border-[#000054] px-4 py-3 text-sm font-bold text-[#000054] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#000054] hover:text-white hover:shadow-md hover:shadow-[#000054]/20"
         >
-          View details
+          {copy.viewDetails}
         </Link>
       </div>
     </article>

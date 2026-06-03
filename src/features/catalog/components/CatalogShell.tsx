@@ -6,6 +6,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 
 type CatalogShellProps = {
   eyebrow: string;
@@ -20,9 +21,9 @@ type CatalogShellProps = {
 export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false }: CatalogShellProps) {
   return (
     <ProtectedGate enabled={protectedPage}>
-      <div className="min-h-screen bg-[#F8F9FA]">
+      <div className="min-h-dvh bg-[#F8F9FA]">
         <Navbar />
-        <main id="main-content" tabIndex={-1} className={`mx-auto w-full px-5 pt-6 pb-12 outline-none lg:px-8 ${wide ? "max-w-[calc(100vw-2rem)] 2xl:max-w-[1720px]" : "max-w-7xl"}`}>
+        <main id="main-content" tabIndex={-1} className={`mx-auto min-h-[calc(100dvh-4.5rem)] w-full px-5 pt-6 pb-12 outline-none lg:px-8 ${wide ? "max-w-[calc(100vw-2rem)] 2xl:max-w-[1720px]" : "max-w-7xl"}`}>
           <section className="rounded-2xl border border-[#EDEDF2] bg-white p-6 shadow-[0_24px_60px_rgba(7,7,88,0.08)] md:p-8">
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
               <div>
@@ -44,7 +45,17 @@ export function CatalogShell({ eyebrow, title, description, children, actions, p
 function ProtectedGate({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, isInitializing, refresh } = useAuth();
+  const { locale } = useLanguage();
   const [isRecoveringSession, setIsRecoveringSession] = useState(false);
+  const copy = locale === "vi"
+    ? {
+        checking: "Đang kiểm tra phiên đăng nhập...",
+        redirecting: "Đang chuyển đến trang đăng nhập...",
+      }
+    : {
+        checking: "Checking your session...",
+        redirecting: "Redirecting to login...",
+      };
 
   useEffect(() => {
     if (!enabled || isInitializing || isAuthenticated) return;
@@ -77,24 +88,29 @@ function ProtectedGate({ enabled, children }: { enabled: boolean; children: Reac
   if (!enabled) return children;
 
   if (isInitializing || isRecoveringSession) {
-    return <AuthStatus message="Checking your session..." />;
+    return <AuthStatus message={copy.checking} />;
   }
 
   if (!isAuthenticated) {
-    return <AuthStatus message="Redirecting to login..." />;
+    return <AuthStatus message={copy.redirecting} />;
   }
 
   return children;
 }
 
 function AuthStatus({ message }: { message: string }) {
+  const { locale } = useLanguage();
+  const copy = locale === "vi"
+    ? { eyebrow: "Xác thực", backHome: "Về trang chủ" }
+    : { eyebrow: "Authenticating", backHome: "Back home" };
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#F8F9FA] px-5">
+    <main className="flex min-h-dvh items-center justify-center bg-[#F8F9FA] px-5">
       <div className="w-full max-w-md rounded-2xl border border-[#EDEDF2] bg-white p-8 text-center shadow-[0_24px_60px_rgba(7,7,88,0.14)]">
-        <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">Authenticating</p>
+        <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{copy.eyebrow}</p>
         <h1 className="mt-3 font-serif text-3xl font-bold text-[#000054]">{message}</h1>
         <Link href="/" className="mt-5 inline-flex rounded-full border border-[#D9DCE8] px-4 py-2 text-sm font-bold text-[#000054]">
-          Back home
+          {copy.backHome}
         </Link>
       </div>
     </main>

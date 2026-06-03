@@ -7,6 +7,7 @@ import { hasAdminAccessFromToken } from "@/features/auth/utils/authRoles";
 import { getStaffDashboardSummary } from "@/features/circulation/services/circulationService";
 import { StaffDashboardSummary } from "@/features/circulation/types/circulation.type";
 import { CatalogShell, Notice, SecondaryAction } from "@/features/catalog/components/CatalogShell";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 
 type Metric = {
   label: string;
@@ -23,7 +24,98 @@ type ActionItem = {
   tone: "red" | "green" | "gold";
 };
 
+const copy = {
+  en: {
+    loadError: "Could not load admin dashboard summary.",
+    accessDenied: "This dashboard requires ADMIN access.",
+    eyebrow: "Admin dashboard",
+    title: "Library command center",
+    description: "A focused operations dashboard for circulation health, reservation pickup work, fines, and today's desk activity.",
+    actions: {
+      adminCatalog: "Admin catalog",
+      circulationDesk: "Circulation desk",
+      borrowers: "Borrowers",
+    },
+    breadcrumb: "Pages / Dashboard",
+    mainTitle: "Main Dashboard",
+    mainDescription: "Metrics first, then action items. This view keeps staff work visible without digging through tables.",
+    actionCenter: "Action Center",
+    attention: "What needs attention",
+    openLoanMonitor: "Open loan monitor >",
+    todayReport: "Today report",
+    deskActivity: "Desk activity",
+    live: "Live",
+    shortcutsTitle: "Admin shortcuts",
+    open: "Open >",
+    waitingForData: "Waiting for data",
+    metrics: {
+      activeLoans: ["Active loans", "Books currently checked out."],
+      overdueLoans: ["Overdue loans", "Loans needing staff follow-up."],
+      readyHolds: ["Ready holds", "Reservations waiting at pickup."],
+      unpaidFines: ["Unpaid fines", "total outstanding."],
+      borrowedToday: ["Borrowed today", "Checkout activity for today."],
+      returnedToday: ["Returned today", "Check-in activity for today."],
+    },
+    actionItems: {
+      overdue: ["Overdue follow-up", "Review overdue loans and contact borrowers before fines keep accumulating."],
+      holds: ["Ready reservations", "Prepare assigned copies and complete pickup checkout when members arrive."],
+      fines: ["Unpaid fine records", "Use borrower profiles to review balances and explain outstanding charges."],
+    },
+    shortcuts: [
+      ["Manage catalog", "Edit metadata, inventory, and physical copies."],
+      ["Category taxonomy", "Maintain catalog classification."],
+      ["Borrower profiles", "Inspect loans, holds, fines, and account status."],
+      ["Import jobs", "Review CSV import progress and errors."],
+    ],
+  },
+  vi: {
+    loadError: "Không thể tải tóm tắt dashboard quản trị.",
+    accessDenied: "Dashboard này yêu cầu quyền ADMIN.",
+    eyebrow: "Dashboard quản trị",
+    title: "Trung tâm điều hành thư viện",
+    description: "Dashboard tập trung cho tình trạng lưu thông, lượt nhận sách đặt giữ, tiền phạt và hoạt động quầy trong ngày.",
+    actions: {
+      adminCatalog: "Quản trị sách",
+      circulationDesk: "Quầy lưu thông",
+      borrowers: "Người mượn",
+    },
+    breadcrumb: "Trang / Dashboard",
+    mainTitle: "Dashboard chính",
+    mainDescription: "Ưu tiên chỉ số và việc cần xử lý để staff nắm tình hình mà không phải đào qua nhiều bảng.",
+    actionCenter: "Trung tâm xử lý",
+    attention: "Việc cần chú ý",
+    openLoanMonitor: "Mở theo dõi lượt mượn >",
+    todayReport: "Báo cáo hôm nay",
+    deskActivity: "Hoạt động quầy",
+    live: "Trực tiếp",
+    shortcutsTitle: "Lối tắt quản trị",
+    open: "Mở >",
+    waitingForData: "Đang chờ dữ liệu",
+    metrics: {
+      activeLoans: ["Đang mượn", "Sách hiện đang được mượn."],
+      overdueLoans: ["Quá hạn", "Các lượt mượn cần staff theo dõi."],
+      readyHolds: ["Sẵn sàng nhận", "Lượt đặt giữ đang chờ nhận tại quầy."],
+      unpaidFines: ["Phạt chưa trả", "tổng còn tồn."],
+      borrowedToday: ["Mượn hôm nay", "Hoạt động checkout trong ngày."],
+      returnedToday: ["Trả hôm nay", "Hoạt động check-in trong ngày."],
+    },
+    actionItems: {
+      overdue: ["Theo dõi quá hạn", "Xem các lượt quá hạn và liên hệ người mượn trước khi phí phạt tiếp tục tăng."],
+      holds: ["Lượt đặt sẵn sàng", "Chuẩn bị bản sao đã gán và hoàn tất pickup checkout khi thành viên tới nhận."],
+      fines: ["Hồ sơ tiền phạt", "Dùng hồ sơ người mượn để xem số dư và giải thích các khoản còn tồn."],
+    },
+    shortcuts: [
+      ["Quản lý danh mục sách", "Sửa metadata, tồn kho và bản sao vật lý."],
+      ["Phân loại danh mục", "Bảo trì hệ thống phân loại sách."],
+      ["Hồ sơ người mượn", "Kiểm tra lượt mượn, đặt giữ, tiền phạt và trạng thái tài khoản."],
+      ["Tác vụ import", "Xem tiến trình và lỗi import CSV."],
+    ],
+  },
+};
+
 export function AdminDashboardPage() {
+  const { locale } = useLanguage();
+  const text = copy[locale];
   const { accessToken, hasAdminAccess, refresh } = useAuth();
   const [summary, setSummary] = useState<StaffDashboardSummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +141,7 @@ export function AdminDashboardPage() {
       })
       .catch((fetchError) => {
         if (!isMounted) return;
-        setError(fetchError instanceof Error ? fetchError.message : "Could not load admin dashboard summary.");
+        setError(fetchError instanceof Error ? fetchError.message : text.loadError);
       })
       .finally(() => {
         if (isMounted) {
@@ -61,106 +153,106 @@ export function AdminDashboardPage() {
       isMounted = false;
       window.clearTimeout(loadingTimerId);
     };
-  }, [accessToken, canUseAdminDashboard, refreshAccessToken]);
+  }, [accessToken, canUseAdminDashboard, refreshAccessToken, text.loadError]);
 
   const metrics = useMemo<Metric[]>(
     () => [
       {
-        label: "Active loans",
-        value: formatNumber(summary?.activeLoans),
-        helper: "Books currently checked out.",
+        label: text.metrics.activeLoans[0],
+        value: formatNumber(summary?.activeLoans, locale),
+        helper: text.metrics.activeLoans[1],
         tone: "blue",
       },
       {
-        label: "Overdue loans",
-        value: formatNumber(summary?.overdueLoans),
-        helper: "Loans needing staff follow-up.",
+        label: text.metrics.overdueLoans[0],
+        value: formatNumber(summary?.overdueLoans, locale),
+        helper: text.metrics.overdueLoans[1],
         tone: "red",
       },
       {
-        label: "Ready holds",
-        value: formatNumber(summary?.holdsReadyForPickup),
-        helper: "Reservations waiting at pickup.",
+        label: text.metrics.readyHolds[0],
+        value: formatNumber(summary?.holdsReadyForPickup, locale),
+        helper: text.metrics.readyHolds[1],
         tone: "green",
       },
       {
-        label: "Unpaid fines",
-        value: formatNumber(summary?.unpaidFineCount),
-        helper: `${formatCurrency(summary?.unpaidFineTotal)} total outstanding.`,
+        label: text.metrics.unpaidFines[0],
+        value: formatNumber(summary?.unpaidFineCount, locale),
+        helper: `${formatCurrency(summary?.unpaidFineTotal, locale)} ${text.metrics.unpaidFines[1]}`,
         tone: "gold",
       },
       {
-        label: "Borrowed today",
-        value: formatNumber(summary?.borrowedToday),
-        helper: "Checkout activity for today.",
+        label: text.metrics.borrowedToday[0],
+        value: formatNumber(summary?.borrowedToday, locale),
+        helper: text.metrics.borrowedToday[1],
         tone: "blue",
       },
       {
-        label: "Returned today",
-        value: formatNumber(summary?.returnedToday),
-        helper: "Check-in activity for today.",
+        label: text.metrics.returnedToday[0],
+        value: formatNumber(summary?.returnedToday, locale),
+        helper: text.metrics.returnedToday[1],
         tone: "green",
       },
     ],
-    [summary],
+    [locale, summary, text.metrics],
   );
 
   const actions = useMemo<ActionItem[]>(
     () => [
       {
-        title: "Overdue follow-up",
-        description: "Review overdue loans and contact borrowers before fines keep accumulating.",
+        title: text.actionItems.overdue[0],
+        description: text.actionItems.overdue[1],
         value: numberOf(summary?.overdueLoans),
         href: "/staff/loans",
         tone: "red",
       },
       {
-        title: "Ready reservations",
-        description: "Prepare assigned copies and complete pickup checkout when members arrive.",
+        title: text.actionItems.holds[0],
+        description: text.actionItems.holds[1],
         value: numberOf(summary?.holdsReadyForPickup),
         href: "/staff/holds",
         tone: "green",
       },
       {
-        title: "Unpaid fine records",
-        description: "Use borrower profiles to review balances and explain outstanding charges.",
+        title: text.actionItems.fines[0],
+        description: text.actionItems.fines[1],
         value: numberOf(summary?.unpaidFineCount),
         href: "/staff/members",
         tone: "gold",
       },
     ],
-    [summary],
+    [summary, text.actionItems],
   );
 
   return (
     <CatalogShell
       protectedPage
       wide
-      eyebrow="Admin dashboard"
-      title="Library command center"
-      description="A focused operations dashboard for circulation health, reservation pickup work, fines, and today's desk activity."
+      eyebrow={text.eyebrow}
+      title={text.title}
+      description={text.description}
       actions={
         <>
-          <SecondaryAction href="/admin/books">Admin catalog</SecondaryAction>
-          <SecondaryAction href="/staff/circulation">Circulation desk</SecondaryAction>
-          <SecondaryAction href="/staff/members">Borrowers</SecondaryAction>
+          <SecondaryAction href="/admin/books">{text.actions.adminCatalog}</SecondaryAction>
+          <SecondaryAction href="/staff/circulation">{text.actions.circulationDesk}</SecondaryAction>
+          <SecondaryAction href="/staff/members">{text.actions.borrowers}</SecondaryAction>
         </>
       }
     >
-      {!canUseAdminDashboard ? <Notice tone="error" message="This dashboard requires ADMIN access." /> : null}
+      {!canUseAdminDashboard ? <Notice tone="error" message={text.accessDenied} /> : null}
       {error ? <div className="mb-5"><Notice tone="error" message={error} /></div> : null}
 
       <section className="rounded-3xl border border-[#DDE5F4] bg-[#F4F7FB] p-4 shadow-[0_24px_60px_rgba(7,7,88,0.10)] md:p-6">
         <div className="rounded-2xl border border-white bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">Pages / Dashboard</p>
-              <h2 className="mt-2 font-serif text-3xl font-bold text-[#000054]">Main Dashboard</h2>
+              <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">{text.breadcrumb}</p>
+              <h2 className="mt-2 font-serif text-3xl font-bold text-[#000054]">{text.mainTitle}</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-[#333333]">
-                Metrics first, then action items. This view keeps staff work visible without digging through tables.
+                {text.mainDescription}
               </p>
             </div>
-            <GeneratedAt value={summary?.generatedAt} />
+            <GeneratedAt value={summary?.generatedAt} locale={locale} waitingLabel={text.waitingForData} />
           </div>
         </div>
 
@@ -174,11 +266,11 @@ export function AdminDashboardPage() {
           <section className="rounded-2xl border border-white bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">Action Center</p>
-                <h3 className="mt-2 text-xl font-bold text-[#000054]">What needs attention</h3>
+                <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">{text.actionCenter}</p>
+                <h3 className="mt-2 text-xl font-bold text-[#000054]">{text.attention}</h3>
               </div>
               <Link href="/staff/loans" className="text-sm font-bold text-[#E60028] transition hover:text-[#000054]">
-                Open loan monitor &gt;
+                {text.openLoanMonitor}
               </Link>
             </div>
             <div className="mt-5 grid gap-3">
@@ -191,29 +283,29 @@ export function AdminDashboardPage() {
           <section className="rounded-2xl border border-white bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">Today report</p>
-                <h3 className="mt-2 text-xl font-bold text-[#000054]">Desk activity</h3>
+                <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">{text.todayReport}</p>
+                <h3 className="mt-2 text-xl font-bold text-[#000054]">{text.deskActivity}</h3>
               </div>
               <span className="rounded-full border border-[#DDE5F4] px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#337AB7]">
-                Live
+                {text.live}
               </span>
             </div>
             <div className="mt-6 grid gap-4">
-              <ProgressRow label="Borrowed today" value={numberOf(summary?.borrowedToday)} max={maxActivity(summary)} color="#337AB7" />
-              <ProgressRow label="Returned today" value={numberOf(summary?.returnedToday)} max={maxActivity(summary)} color="#28A745" />
-              <ProgressRow label="Ready holds" value={numberOf(summary?.holdsReadyForPickup)} max={maxActivity(summary)} color="#D8B400" />
-              <ProgressRow label="Overdue loans" value={numberOf(summary?.overdueLoans)} max={maxActivity(summary)} color="#E60028" />
+              <ProgressRow label={text.metrics.borrowedToday[0]} value={numberOf(summary?.borrowedToday)} max={maxActivity(summary)} color="#337AB7" locale={locale} />
+              <ProgressRow label={text.metrics.returnedToday[0]} value={numberOf(summary?.returnedToday)} max={maxActivity(summary)} color="#28A745" locale={locale} />
+              <ProgressRow label={text.metrics.readyHolds[0]} value={numberOf(summary?.holdsReadyForPickup)} max={maxActivity(summary)} color="#D8B400" locale={locale} />
+              <ProgressRow label={text.metrics.overdueLoans[0]} value={numberOf(summary?.overdueLoans)} max={maxActivity(summary)} color="#E60028" locale={locale} />
             </div>
           </section>
         </div>
 
         <section className="mt-5 rounded-2xl border border-white bg-white p-5 shadow-sm">
-          <h3 className="text-xl font-bold text-[#000054]">Admin shortcuts</h3>
+          <h3 className="text-xl font-bold text-[#000054]">{text.shortcutsTitle}</h3>
           <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <ShortcutCard title="Manage catalog" description="Edit metadata, inventory, and physical copies." href="/admin/books" />
-            <ShortcutCard title="Category taxonomy" description="Maintain catalog classification." href="/admin/categories" />
-            <ShortcutCard title="Borrower profiles" description="Inspect loans, holds, fines, and account status." href="/staff/members" />
-            <ShortcutCard title="Import jobs" description="Review CSV import progress and errors." href="/staff/imports" />
+            <ShortcutCard title={text.shortcuts[0][0]} description={text.shortcuts[0][1]} href="/admin/books" openLabel={text.open} />
+            <ShortcutCard title={text.shortcuts[1][0]} description={text.shortcuts[1][1]} href="/admin/categories" openLabel={text.open} />
+            <ShortcutCard title={text.shortcuts[2][0]} description={text.shortcuts[2][1]} href="/staff/members" openLabel={text.open} />
+            <ShortcutCard title={text.shortcuts[3][0]} description={text.shortcuts[3][1]} href="/staff/imports" openLabel={text.open} />
           </div>
         </section>
       </section>
@@ -268,14 +360,14 @@ function ActionCard({ item }: { item: ActionItem }) {
   );
 }
 
-function ProgressRow({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+function ProgressRow({ label, value, max, color, locale }: { label: string; value: number; max: number; color: string; locale: "en" | "vi" }) {
   const width = `${Math.max(4, Math.round((value / max) * 100))}%`;
 
   return (
     <div>
       <div className="flex items-center justify-between gap-4 text-sm">
         <span className="font-bold text-[#000054]">{label}</span>
-        <span className="font-semibold text-[#333333]/75">{value.toLocaleString()}</span>
+        <span className="font-semibold text-[#333333]/75">{value.toLocaleString(locale === "vi" ? "vi-VN" : "en-US")}</span>
       </div>
       <div className="mt-2 h-3 overflow-hidden rounded-full bg-[#E6ECF6]">
         <div className="h-full rounded-full transition-all duration-500" style={{ width, backgroundColor: color }} />
@@ -284,22 +376,22 @@ function ProgressRow({ label, value, max, color }: { label: string; value: numbe
   );
 }
 
-function ShortcutCard({ title, description, href }: { title: string; description: string; href: string }) {
+function ShortcutCard({ title, description, href, openLabel }: { title: string; description: string; href: string; openLabel: string }) {
   return (
     <Link href={href} className="group rounded-2xl border border-[#E6ECF6] bg-[#F8FAFE] p-4 transition-all duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-md">
       <p className="font-bold text-[#000054] transition group-hover:text-[#337AB7]">{title}</p>
       <p className="mt-2 text-sm leading-6 text-[#333333]">{description}</p>
-      <span className="mt-3 inline-flex text-sm font-bold text-[#E60028] transition-transform duration-300 group-hover:translate-x-1">Open &gt;</span>
+      <span className="mt-3 inline-flex text-sm font-bold text-[#E60028] transition-transform duration-300 group-hover:translate-x-1">{openLabel}</span>
     </Link>
   );
 }
 
-function GeneratedAt({ value }: { value?: string }) {
+function GeneratedAt({ value, locale, waitingLabel }: { value?: string; locale: "en" | "vi"; waitingLabel: string }) {
   if (!value) {
-    return <span className="rounded-full border border-[#DDE5F4] bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#333333]/70">Waiting for data</span>;
+    return <span className="rounded-full border border-[#DDE5F4] bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#333333]/70">{waitingLabel}</span>;
   }
 
-  return <span className="rounded-full border border-[#DDE5F4] bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#337AB7]">{formatDateTime(value)}</span>;
+  return <span className="rounded-full border border-[#DDE5F4] bg-white px-4 py-2 text-xs font-bold uppercase tracking-wide text-[#337AB7]">{formatDateTime(value, locale)}</span>;
 }
 
 function maxActivity(summary: StaffDashboardSummary | null) {
@@ -316,19 +408,19 @@ function numberOf(value?: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
-function formatNumber(value?: number) {
-  return numberOf(value).toLocaleString();
+function formatNumber(value?: number, locale: "en" | "vi" = "en") {
+  return numberOf(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US");
 }
 
-function formatCurrency(value?: number) {
-  return typeof value === "number" ? value.toLocaleString("en-US", { style: "currency", currency: "USD" }) : "$0.00";
+function formatCurrency(value?: number, locale: "en" | "vi" = "en") {
+  return typeof value === "number" ? value.toLocaleString(locale === "vi" ? "vi-VN" : "en-US", { style: "currency", currency: "USD" }) : "$0.00";
 }
 
-function formatDateTime(value: string) {
+function formatDateTime(value: string, locale: "en" | "vi") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
-  return date.toLocaleString("en-US", {
+  return date.toLocaleString(locale === "vi" ? "vi-VN" : "en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
