@@ -24,6 +24,13 @@ export type Book = {
   id?: number;
   title: string;
   isbn: string;
+  imageUrl?: string | null;
+  coverImage?: {
+    originalUrl?: string | null;
+    thumbnailUrl?: string | null;
+    detailUrl?: string | null;
+    altText?: string | null;
+  } | null;
   authors?: Author[] | string[];
   category?: Category | string | null;
   categoryId?: number | null;

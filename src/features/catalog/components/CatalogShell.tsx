@@ -16,25 +16,42 @@ type CatalogShellProps = {
   actions?: ReactNode;
   protectedPage?: boolean;
   wide?: boolean;
+  frameless?: boolean;
 };
 
-export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false }: CatalogShellProps) {
+export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false, frameless = false }: CatalogShellProps) {
   return (
     <ProtectedGate enabled={protectedPage}>
       <div className="min-h-dvh bg-[#F8F9FA]">
         <Navbar />
         <main id="main-content" tabIndex={-1} className={`mx-auto min-h-[calc(100dvh-4.5rem)] w-full px-5 pt-6 pb-12 outline-none lg:px-8 ${wide ? "max-w-[calc(100vw-2rem)] 2xl:max-w-[1720px]" : "max-w-7xl"}`}>
-          <section className="rounded-2xl border border-[#EDEDF2] bg-white p-6 shadow-[0_24px_60px_rgba(7,7,88,0.08)] md:p-8">
-            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{eyebrow}</p>
-                <h1 className="mt-3 font-serif text-4xl font-bold text-[#000054]">{title}</h1>
-                <p className="mt-3 max-w-3xl leading-7 text-[#333333]">{description}</p>
+          {frameless ? (
+            <>
+              <section className="px-1 py-5 md:px-2">
+                <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{eyebrow}</p>
+                    <h1 className="mt-3 text-4xl font-black tracking-tight text-[#111827] md:text-5xl">{title}</h1>
+                    <p className="mt-3 max-w-3xl leading-7 text-[#333333]">{description}</p>
+                  </div>
+                  {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+                </div>
+              </section>
+              <div className="mt-4">{children}</div>
+            </>
+          ) : (
+            <section className="rounded-2xl border border-[#EDEDF2] bg-white p-6 shadow-[0_24px_60px_rgba(7,7,88,0.08)] md:p-8">
+              <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{eyebrow}</p>
+                  <h1 className="mt-3 font-serif text-4xl font-bold text-[#000054]">{title}</h1>
+                  <p className="mt-3 max-w-3xl leading-7 text-[#333333]">{description}</p>
+                </div>
+                {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
               </div>
-              {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
-            </div>
-            <div className="mt-8">{children}</div>
-          </section>
+              <div className="mt-8">{children}</div>
+            </section>
+          )}
         </main>
         <Footer />
       </div>

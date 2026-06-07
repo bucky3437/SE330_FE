@@ -100,26 +100,24 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  // 1. Khởi tạo Lazy State: Đọc trực tiếp từ localStorage ngay khi tạo state ở Client,
-  // giúp tránh việc gọi setLocale() muộn mằn trong useEffect.
-  const [locale, setLocale] = useState<Locale>(() => {
-    if (typeof window !== "undefined") {
-      const storedLocale = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      return storedLocale === "vi" || storedLocale === "en" ? storedLocale : "en";
-    }
-    return "en"; // Mặc định ở Server
-  });
-
-  // 2. State kiểm tra trạng thái Hydration để phục vụ hàm dịch thuật t() độc lập
+  const [locale, setLocale] = useState<Locale>("en");
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    // Để đánh lừa ESLint và chạy an toàn, chúng ta thực hiện đổi state thông qua 
-    // một hàm callback của toán tử hoặc setTimeout ngắn, hoặc đơn giản là set một flag thuần túy.
-    // Tuy nhiên, cách sạch nhất là cho nó chạy sau một nhịp microtask:
-    const handleMount = () => setIsMounted(true);
-    handleMount();
+    const syncLocale = window.setTimeout(() => {
+      const storedLocale = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
 
+      if (storedLocale === "vi" || storedLocale === "en") {
+        setLocale(storedLocale);
+      }
+
+      setIsMounted(true);
+    }, 0);
+
+    return () => window.clearTimeout(syncLocale);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.lang = locale;
   }, [locale]);
 
@@ -135,11 +133,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // 3. Hàm dịch thuật t() chống lệch Hydration
   const t = useCallback(
     (key: TranslationKey) => {
-      // Khi SSR hoặc lượt render đầu tiên ở Client (chưa mount), ép trả về tiếng Anh để khớp HTML Server.
-      // Sau khi mount thành công, isMounted = true sẽ kích hoạt render lại đúng ngôn ngữ người dùng chọn.
       const activeLocale = isMounted ? locale : "en";
       return translations[activeLocale][key];
     },

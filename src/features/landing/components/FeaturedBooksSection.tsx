@@ -1,38 +1,47 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Book } from "@/features/catalog/types/catalog.type";
+import { useEffect, useMemo, useState } from "react";
+import {
+  authorLabel,
+  bookCoverAlt,
+  bookCoverUrl,
+  bookIdOf,
+  categoryLabel,
+} from "@/features/catalog/components/catalogHelpers";
 import { getBooks } from "@/features/catalog/services/catalogService";
-import { authorLabel, availabilityLabel, bookIdOf, categoryLabel } from "@/features/catalog/components/catalogHelpers";
+import { Book } from "@/features/catalog/types/catalog.type";
 import { useLanguage } from "@/features/i18n/context/LanguageContext";
 
-const FEATURED_BOOKS_LIMIT = "3";
+const FEATURED_BOOKS_LIMIT = "6";
 
 const featuredCopy = {
   en: {
-    title: "New and Featured Books",
-    description: "Recently highlighted resources from core library categories.",
+    eyebrow: "Fresh arrivals",
+    title: "New Books",
+    description: "Browse the latest titles added to the Athenaeum collection. Select a cover to bring it into focus.",
     viewAll: "View all books",
+    viewDetails: "View details",
     by: "by",
     unknownAuthor: "Unknown author",
-    availability: "Availability",
-    language: "Language",
-    copies: "copies",
-    notAvailable: "N/A",
-    viewDetails: "View details",
+    newest: "Newest in collection",
+    previous: "Previous book",
+    next: "Next book",
+    empty: "New books will appear here when the catalog is updated.",
   },
   vi: {
-    title: "Sách mới và nổi bật",
-    description: "Những tài nguyên mới được giới thiệu từ các danh mục chính của thư viện.",
+    eyebrow: "Vừa cập nhật",
+    title: "Sách mới",
+    description: "Khám phá những đầu sách mới nhất vừa được thêm vào bộ sưu tập The Athenaeum.",
     viewAll: "Xem tất cả sách",
+    viewDetails: "Xem chi tiết",
     by: "bởi",
     unknownAuthor: "Chưa rõ tác giả",
-    availability: "Tình trạng",
-    language: "Ngôn ngữ",
-    copies: "bản",
-    notAvailable: "Chưa có",
-    viewDetails: "Xem chi tiết",
+    newest: "Mới nhất trong thư viện",
+    previous: "Sách trước",
+    next: "Sách tiếp theo",
+    empty: "Sách mới sẽ hiển thị ở đây khi danh mục được cập nhật.",
   },
 };
 
@@ -40,16 +49,20 @@ export function FeaturedBooksSection() {
   const { locale } = useLanguage();
   const copy = featuredCopy[locale];
   const [books, setBooks] = useState<Book[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const activeBook = books[activeIndex];
+  const activeAuthors = activeBook?.authors?.map(authorLabel).join(", ") || copy.unknownAuthor;
+  const activeBookId = activeBook ? bookIdOf(activeBook) : "";
 
   useEffect(() => {
     let isMounted = true;
 
-    getBooks({ page: "0", size: FEATURED_BOOKS_LIMIT })
+    getBooks({ page: "0", size: FEATURED_BOOKS_LIMIT, sort: "createdAt,desc" })
       .then((bookPage) => {
-        if (isMounted) {
-          setBooks(bookPage.items.slice(0, 3));
-        }
+        if (!isMounted) return;
+        setBooks(bookPage.items.slice(0, Number(FEATURED_BOOKS_LIMIT)));
+        setActiveIndex(0);
       })
       .catch(() => {
         if (isMounted) {
@@ -67,95 +80,266 @@ export function FeaturedBooksSection() {
     };
   }, []);
 
+  const visibleBooks = useMemo(() => {
+    return books.map((book, index) => ({
+      book,
+      index,
+      offset: shortestOffset(index, activeIndex, books.length),
+    }));
+  }, [activeIndex, books]);
+
+  function goToBook(index: number) {
+    if (!books.length) return;
+    setActiveIndex(wrapIndex(index, books.length));
+  }
+
+  function goPrevious() {
+    goToBook(activeIndex - 1);
+  }
+
+  function goNext() {
+    goToBook(activeIndex + 1);
+  }
+
   return (
-    <section className="bg-white px-5 py-20 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="animate-fade-up flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <h2 className="font-serif text-3xl font-bold text-[#000054]">{copy.title}</h2>
-            <p className="mt-3 max-w-2xl leading-7 text-[#333333]">
-              {copy.description}
-            </p>
+    <section className="relative isolate min-h-[840px] overflow-hidden bg-[#21160f] px-5 py-20 text-white lg:px-8">
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 -z-20 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "url('https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=2400&q=85')",
+        }}
+      />
+      <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_73%_50%,rgba(255,219,164,0.16)_0%,rgba(44,30,20,0.18)_28%,rgba(23,16,12,0.58)_62%,rgba(10,8,7,0.86)_100%)]" />
+      <div className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,7,6,0.72)_0%,rgba(23,16,12,0.42)_42%,rgba(12,10,8,0.50)_100%)]" />
+
+      <div className="mx-auto max-w-[1700px]">
+        <div className="relative z-30 flex flex-col justify-between gap-6 md:flex-row md:items-start">
+          <div className="max-w-xl pt-4">
+            <p className="text-xs font-black uppercase tracking-[0.42em] text-[#ff7777]">{copy.eyebrow}</p>
+            <span className="mt-6 block h-0.5 w-12 bg-[#E60028]" />
+            <h2 className="mt-8 font-serif text-6xl font-normal tracking-[-0.04em] text-white md:text-7xl lg:text-[7rem]">
+              {copy.title}
+            </h2>
+            <p className="mt-6 max-w-md text-lg leading-8 text-white/82">{copy.description}</p>
           </div>
           <Link
             href="/books"
-            className="rounded-full border-2 border-[#D9DCE8] px-5 py-2.5 text-sm font-bold text-[#337AB7] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#337AB7] hover:bg-[#337AB7] hover:text-white hover:shadow-md hover:shadow-[#337AB7]/20"
+            className="mt-3 inline-flex w-fit items-center gap-3 rounded-full border border-white/80 bg-black/12 px-7 py-4 text-sm font-bold text-white backdrop-blur-md transition hover:-translate-y-0.5 hover:bg-white hover:text-black md:mt-6"
           >
+            <span aria-hidden="true" className="grid h-5 w-5 grid-cols-2 gap-0.5">
+              <span className="rounded-sm border border-current" />
+              <span className="rounded-sm border border-current" />
+              <span className="rounded-sm border border-current" />
+              <span className="rounded-sm border border-current" />
+            </span>
             {copy.viewAll}
           </Link>
         </div>
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
-          {isLoading
-            ? Array.from({ length: 3 }).map((_, index) => <FeaturedBookSkeleton key={index} />)
-            : books.map((book, index) => <FeaturedBookCard key={bookIdOf(book) || book.isbn} book={book} index={index} copy={copy} />)}
-        </div>
+        {isLoading ? (
+          <FeaturedBooksSkeleton />
+        ) : books.length ? (
+          <div className="mt-0 grid gap-12 xl:grid-cols-[minmax(0,1fr)_430px] xl:items-start">
+            <div className="relative min-h-[560px] overflow-visible [perspective:1400px]">
+              <div className="absolute left-8 top-52 z-40 hidden flex-col items-center gap-4 text-[#ff7777] md:flex">
+                <span className="text-sm font-black tracking-widest">{String(activeIndex + 1).padStart(2, "0")}</span>
+                <span className="h-28 w-px bg-white/65" />
+                <span className="text-sm font-black tracking-widest">{String(Math.min(books.length, Number(FEATURED_BOOKS_LIMIT))).padStart(2, "0")}</span>
+              </div>
+              <button
+                type="button"
+                onClick={goPrevious}
+                aria-label={copy.previous}
+                className="absolute bottom-10 left-16 z-50 grid h-14 w-14 place-items-center rounded-full border border-white/40 bg-black/20 text-2xl text-white backdrop-blur transition hover:-translate-y-1 hover:bg-white hover:text-black md:left-20"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={goNext}
+                aria-label={copy.next}
+                className="absolute bottom-10 left-36 z-50 grid h-14 w-14 place-items-center rounded-full bg-white text-2xl text-black shadow-[0_14px_36px_rgba(0,0,0,0.30)] transition hover:-translate-y-1 hover:bg-[#E60028] hover:text-white md:left-40"
+              >
+                →
+              </button>
+
+              <div className="absolute bottom-24 left-36 right-8 h-20 bg-[linear-gradient(180deg,#9f6b3f_0%,#63371f_44%,#1c1009_100%)] shadow-[0_30px_54px_rgba(0,0,0,0.48)] md:left-44" />
+              <div className="absolute bottom-16 left-32 right-4 h-9 bg-[linear-gradient(180deg,#3f2314_0%,#100906_100%)] shadow-[0_24px_38px_rgba(0,0,0,0.50)] md:left-40" />
+
+              <div className="absolute bottom-6 left-28 right-0 top-32 mx-auto max-w-6xl overflow-visible md:left-36">
+                {visibleBooks.map(({ book, index, offset }) => (
+                  <FeaturedBookCover
+                    key={bookIdOf(book) || book.isbn}
+                    book={book}
+                    index={index}
+                    offset={offset}
+                    isActive={index === activeIndex}
+                    copy={copy}
+                    onFocus={() => goToBook(index)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <aside className="mt-8 rounded-[28px] border border-white/55 bg-[#fffaf2]/96 p-8 text-[#151515] shadow-[0_32px_90px_rgba(0,0,0,0.32)] backdrop-blur-md xl:mt-0 xl:-translate-y-48">
+              <div className="flex items-start justify-between gap-5">
+                <p className="text-xs font-black uppercase tracking-[0.34em] text-[#A82424]">{copy.newest}</p>
+                <span aria-hidden="true" className="text-3xl leading-none text-black/35">♡</span>
+              </div>
+              <h3 className="mt-7 font-serif text-4xl font-normal leading-tight tracking-[-0.04em] text-[#151515] md:text-5xl">
+                {activeBook?.title}
+              </h3>
+              <p className="mt-5 text-sm font-medium text-[#333333]">
+                {copy.by} <span className="text-[#111827]">{activeAuthors}</span>
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3 text-xs text-[#555555]">
+                <span className="rounded-full border border-black/12 px-3 py-1 font-semibold">
+                  {activeBook ? categoryLabel(activeBook.category) : ""}
+                </span>
+                {activeBook?.publishedDate ? (
+                  <span className="border-l border-black/18 pl-3 font-medium">
+                    {activeBook.publishedDate}
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-8 border-t border-black/12 pt-7 text-sm leading-7 text-[#404040]">
+                A curated new arrival from the Athenaeum catalog, ready for quick discovery and deeper reading.
+              </div>
+              <Link
+                href={activeBookId ? `/books/${activeBookId}` : "/books"}
+                className="mt-8 inline-flex w-full items-center justify-center gap-4 rounded-full bg-[#C1282D] px-5 py-4 text-sm font-black text-white shadow-[0_18px_36px_rgba(193,40,45,0.28)] transition hover:-translate-y-0.5 hover:bg-black"
+              >
+                {copy.viewDetails}
+                <span aria-hidden="true">→</span>
+              </Link>
+            </aside>
+          </div>
+        ) : (
+          <div className="mt-10 border border-white/20 bg-white/10 p-8 text-white/75 backdrop-blur">
+            {copy.empty}
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
-function FeaturedBookCard({ book, index, copy }: { book: Book; index: number; copy: typeof featuredCopy.en }) {
+function FeaturedBookCover({
+  book,
+  index,
+  offset,
+  isActive,
+  copy,
+  onFocus,
+}: {
+  book: Book;
+  index: number;
+  offset: number;
+  isActive: boolean;
+  copy: typeof featuredCopy.en;
+  onFocus: () => void;
+}) {
+  const coverUrl = bookCoverUrl(book, "detail") || bookCoverUrl(book, "thumbnail");
   const bookId = bookIdOf(book);
-
-  return (
-    <article
-      className={`animate-fade-up group overflow-hidden rounded-xl border border-[#EDEDF2] bg-white shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-[#337AB7]/40 hover:shadow-xl ${
-        index === 0 ? "animate-delay-75" : index === 1 ? "animate-delay-150" : "animate-delay-225"
-      }`}
-    >
-      <div className="relative h-32 overflow-hidden bg-gradient-mesh p-5 text-white">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#000054] via-[#337AB7] to-[#51D2FF] opacity-90" />
-        <div className="relative">
-          <p className="inline-flex rounded-full bg-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:bg-white/30">
-            {categoryLabel(book.category)}
+  const absOffset = Math.abs(offset);
+  const transform = coverTransform(offset);
+  const isVisible = absOffset <= 2;
+  const content = (
+    <>
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#F3F4F6] shadow-[0_28px_50px_rgba(0,0,0,0.36)] ring-1 ring-white/10">
+        {coverUrl ? (
+          <Image
+            src={coverUrl}
+            alt={bookCoverAlt(book)}
+            fill
+            unoptimized
+            sizes="(min-width: 1280px) 230px, 42vw"
+            className="object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col justify-between bg-[linear-gradient(135deg,#111827,#000000)] p-5 text-white">
+            <span className="text-xs font-black uppercase tracking-[0.22em] text-white/60">{categoryLabel(book.category)}</span>
+            <h3 className="text-2xl font-black leading-tight">{book.title}</h3>
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/50">The Athenaeum</span>
+          </div>
+        )}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/82 via-black/36 to-transparent p-4 pt-16 text-white">
+          <h3 className="line-clamp-2 text-sm font-black leading-tight">{book.title}</h3>
+          <p className="mt-1 line-clamp-1 text-[11px] font-medium text-white/72">
+            {(book.authors ?? []).map(authorLabel).join(", ") || copy.unknownAuthor}
           </p>
         </div>
       </div>
+      <span className="sr-only">{isActive ? copy.viewDetails : `${copy.viewDetails}: ${book.title}`}</span>
+    </>
+  );
 
-      <div className="p-6">
-        <h3 className="line-clamp-2 min-h-14 text-xl font-bold text-[#000054] transition-colors duration-300 group-hover:text-[#337AB7]">
-          {book.title}
-        </h3>
-        <p className="mt-2 text-sm text-[#333333]">
-          {copy.by} {(book.authors ?? []).map(authorLabel).join(", ") || copy.unknownAuthor}
-        </p>
+  const className = `absolute left-1/2 top-[72%] w-[152px] -translate-x-1/2 -translate-y-1/2 outline-none transition-all duration-700 ease-[cubic-bezier(.2,.8,.2,1)] sm:w-[188px] md:w-[230px] ${
+    isVisible ? "pointer-events-auto" : "pointer-events-none opacity-0"
+  } ${isActive ? "z-40" : absOffset === 1 ? "z-30" : absOffset === 2 ? "z-20" : "z-10"}`;
 
-        <dl className="mt-5 grid gap-3 text-sm">
-          <div className="flex justify-between border-t border-[#EDEDF2] pt-3">
-            <dt className="font-semibold text-[#000054]">{copy.availability}</dt>
-            <dd className="font-medium text-[#337AB7]">{availabilityLabel(book)} {copy.copies}</dd>
-          </div>
-          <div className="flex justify-between border-t border-[#EDEDF2] pt-3">
-            <dt className="font-semibold text-[#000054]">{copy.language}</dt>
-            <dd>{book.language || copy.notAvailable}</dd>
-          </div>
-        </dl>
+  if (isActive) {
+    return (
+      <Link
+        href={bookId ? `/books/${bookId}` : "/books"}
+        className={className}
+        style={transform}
+      >
+        {content}
+      </Link>
+    );
+  }
 
-        <Link
-          href={bookId ? `/books/${bookId}` : "/books"}
-          className="mt-6 inline-flex w-full justify-center rounded-full border-2 border-[#000054] px-4 py-3 text-sm font-bold text-[#000054] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#000054] hover:text-white hover:shadow-md hover:shadow-[#000054]/20"
-        >
-          {copy.viewDetails}
-        </Link>
-      </div>
-    </article>
+  return (
+    <button
+      type="button"
+      onClick={onFocus}
+      className={`${className} cursor-pointer`}
+      style={transform}
+      aria-label={`${copy.viewDetails}: ${book.title}`}
+      data-index={index}
+    >
+      {content}
+    </button>
   );
 }
 
-function FeaturedBookSkeleton() {
+function FeaturedBooksSkeleton() {
   return (
-    <article className="animate-pulse overflow-hidden rounded-xl border border-[#EDEDF2] bg-white shadow-sm">
-      <div className="h-32 bg-[#EDEDF2]" />
-      <div className="p-6">
-        <div className="h-6 w-3/4 rounded bg-[#EDEDF2]" />
-        <div className="mt-3 h-4 w-1/2 rounded bg-[#EDEDF2]" />
-        <div className="mt-6 h-px bg-[#EDEDF2]" />
-        <div className="mt-4 h-4 rounded bg-[#EDEDF2]" />
-        <div className="mt-4 h-px bg-[#EDEDF2]" />
-        <div className="mt-4 h-4 rounded bg-[#EDEDF2]" />
-        <div className="mt-6 h-12 rounded-full bg-[#EDEDF2]" />
-      </div>
-    </article>
+    <div className="mt-12 grid gap-10 xl:grid-cols-[minmax(0,1fr)_430px]">
+      <div className="min-h-[560px] animate-pulse bg-white/10" />
+      <div className="h-[430px] animate-pulse bg-white/70" />
+    </div>
   );
+}
+
+function wrapIndex(index: number, length: number) {
+  return ((index % length) + length) % length;
+}
+
+function shortestOffset(index: number, activeIndex: number, length: number) {
+  if (!length) return 0;
+  const raw = index - activeIndex;
+  const half = length / 2;
+
+  if (raw > half) return raw - length;
+  if (raw < -half) return raw + length;
+  return raw;
+}
+
+function coverTransform(offset: number) {
+  const absOffset = Math.abs(offset);
+  const direction = offset < 0 ? -1 : 1;
+  const translateX = offset === 0 ? 0 : direction * (180 + (absOffset - 1) * 112);
+  const translateY = offset === 0 ? -4 : 14 + (absOffset - 1) * 8;
+  const scale = offset === 0 ? 1.03 : Math.max(0.66, 0.85 - (absOffset - 1) * 0.1);
+  const rotate = offset === 0 ? 0 : direction * -4;
+  const opacity = offset === 0 ? 1 : Math.max(0.42, 0.86 - (absOffset - 1) * 0.16);
+
+  return {
+    transform: `translate(-50%, -50%) translateX(${translateX}px) translateY(${translateY}px) scale(${scale}) rotateY(${rotate}deg)`,
+    opacity,
+  };
 }

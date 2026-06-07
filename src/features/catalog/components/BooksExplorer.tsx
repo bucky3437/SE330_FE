@@ -1,16 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { BookCardSkeleton } from "@/components/ui/BookCardSkeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { Book, BookSearchParams, Category } from "../types/catalog.type";
 import { getBooks, getCategories } from "../services/catalogService";
-import { authorLabel, availabilityLabel, availabilityTone, bookIdOf, categoryLabel, entityIdOf } from "./catalogHelpers";
+import { authorLabel, availabilityLabel, bookCoverAlt, bookCoverUrl, bookIdOf, categoryLabel, entityIdOf } from "./catalogHelpers";
 import { CatalogShell, Notice } from "./CatalogShell";
 
-const BOOKS_PER_PAGE = "20";
+const BOOKS_PER_PAGE = "24";
 
 const booksExplorerCopy = {
   en: {
@@ -314,58 +315,15 @@ export function BooksExplorer({ initialQuery = "" }: BooksExplorerProps) {
       )}
 
       {isLoading ? (
-        <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
+        <div className="mt-8 grid gap-x-7 gap-y-10 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
+          {Array.from({ length: 24 }).map((_, index) => (
             <BookCardSkeleton key={index} />
           ))}
         </div>
       ) : (
-        <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-8 grid gap-x-7 gap-y-10 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6">
           {books.map((book) => (
-            <Link
-              key={bookIdOf(book) || book.isbn}
-              href={`/books/${bookIdOf(book)}`}
-              aria-label={`${copy.viewDetails}: ${book.title}`}
-              className="group block overflow-hidden rounded-xl border border-[#EDEDF2] bg-white shadow-sm outline-none transition-all duration-300 hover:-translate-y-2 hover:border-[#337AB7]/40 hover:shadow-xl focus-visible:border-[#337AB7] focus-visible:shadow-[0_0_0_4px_rgba(51,122,183,0.16)]"
-            >
-              <article>
-                <div className="relative min-h-44 overflow-hidden bg-black p-5 text-white">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.16),transparent_34%),linear-gradient(135deg,#111827_0%,#27272a_55%,#000000_100%)]" />
-                  <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 to-transparent" />
-                  <div className="relative flex min-h-34 flex-col justify-between">
-                    <span className="w-fit rounded-full bg-white/14 px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:bg-white/22">
-                      {categoryLabel(book.category)}
-                    </span>
-                    <h2 className="line-clamp-2 text-xl font-bold leading-snug text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">
-                      {book.title}
-                    </h2>
-                  </div>
-                </div>
-
-                <div className="p-5">
-                  <p className="text-sm text-[#333333]">
-                    {copy.by} {(book.authors ?? []).map(authorLabel).join(", ") || copy.unknownAuthor}
-                  </p>
-
-                  <dl className="mt-5 grid gap-3 text-sm">
-                    <div className="flex justify-between border-t border-[#EDEDF2] pt-3">
-                      <dt className="font-semibold text-[#000054]">{copy.isbn}</dt>
-                      <dd className="text-right text-[#333333]">{book.isbn}</dd>
-                    </div>
-                    <div className="flex justify-between border-t border-[#EDEDF2] pt-3">
-                      <dt className="font-semibold text-[#000054]">{copy.languageLabel}</dt>
-                      <dd>{book.language || copy.notAvailable}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="mt-5">
-                    <span className={`rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition-all duration-200 group-hover:scale-105 ${availabilityTone(book)}`}>
-                      {availabilityLabel(book)} {copy.copies}
-                    </span>
-                  </div>
-                </div>
-              </article>
-            </Link>
+            <BookShelfCard key={bookIdOf(book) || book.isbn} book={book} copy={copy} />
           ))}
         </div>
       )}
@@ -398,6 +356,55 @@ export function BooksExplorer({ initialQuery = "" }: BooksExplorerProps) {
         </div>
       )}
     </CatalogShell>
+  );
+}
+
+function BookShelfCard({ book, copy }: { book: Book; copy: typeof booksExplorerCopy.en }) {
+  const coverUrl = bookCoverUrl(book, "thumbnail");
+
+  return (
+    <Link
+      href={`/books/${bookIdOf(book)}`}
+      aria-label={`${copy.viewDetails}: ${book.title}`}
+      className="group block outline-none"
+    >
+      <article className="max-w-[190px]">
+        <div className="relative aspect-[2/3] overflow-hidden rounded-sm bg-[#F3F4F6] ring-1 ring-black/5 transition duration-300 group-hover:-translate-y-1 group-focus-visible:ring-4 group-focus-visible:ring-[#E60028]/25">
+          {coverUrl ? (
+            <Image
+              src={coverUrl}
+              alt={bookCoverAlt(book)}
+              fill
+              unoptimized
+              sizes="(min-width: 1536px) 190px, (min-width: 1280px) 18vw, (min-width: 768px) 30vw, 46vw"
+              className="object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <div className="flex h-full w-full flex-col justify-between bg-[linear-gradient(135deg,#111827_0%,#3f3f46_52%,#000000_100%)] p-4 text-white">
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/70">{categoryLabel(book.category)}</span>
+              <h2 className="line-clamp-4 text-lg font-black leading-tight text-white">{book.title}</h2>
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-white/60">The Athenaeum</span>
+            </div>
+          )}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-5 bg-gradient-to-r from-black/18 to-transparent" />
+        </div>
+        <div className="mt-3">
+          <h2 className="line-clamp-2 text-sm font-black leading-snug text-[#111827] transition group-hover:text-[#E60028]">
+            {book.title}
+          </h2>
+          <p className="mt-1 line-clamp-1 text-xs font-medium text-[#6B7280]">
+            {(book.authors ?? []).map(authorLabel).join(", ") || copy.unknownAuthor}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-[#F3F4F6] px-2 py-1 text-[11px] font-bold text-[#111827]">
+              {availabilityLabel(book)}
+            </span>
+            <span className="line-clamp-1 text-[11px] font-semibold text-[#6B7280]">{categoryLabel(book.category)}</span>
+          </div>
+        </div>
+      </article>
+    </Link>
   );
 }
 
