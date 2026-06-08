@@ -52,13 +52,13 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`group relative rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-150 hover:bg-black/[0.06] hover:text-black overflow-visible ${
+                className={`group relative rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-150 hover:bg-black/[0.06] hover:text-black ${
                   isActive ? "bg-black/[0.06] text-black" : ""
                 }`}
               >
                 {item.label}
                 <span
-                  className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#E60028] transition-transform duration-200 ${
+                  className={`absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-[#E60028] transition-transform duration-200 ${
                     isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
                   }`}
                 />
