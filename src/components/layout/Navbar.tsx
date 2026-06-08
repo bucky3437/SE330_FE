@@ -52,13 +52,13 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`group relative rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-150 hover:bg-black/[0.06] hover:text-black ${
+                className={`group relative rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-150 hover:bg-black/[0.06] hover:text-black overflow-visible ${
                   isActive ? "bg-black/[0.06] text-black" : ""
                 }`}
               >
                 {item.label}
                 <span
-                  className={`absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-[#E60028] transition-transform duration-200 ${
+                  className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-[#E60028] transition-transform duration-200 ${
                     isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
                   }`}
                 />
@@ -107,6 +107,10 @@ function isActiveNavItem(pathname: string, originalHref: string, resolvedHref: s
 
   if (originalHref === "/user/holds") {
     return pathname.startsWith("/user/holds");
+  }
+
+  if (originalHref === "/ebook-catalog") {
+    return pathname.startsWith("/ebook-catalog") || pathname.startsWith("/my-ebooks");
   }
 
   return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
@@ -173,6 +177,15 @@ function UserMenu({
             className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
           >
             My holds
+            <span aria-hidden="true">&gt;</span>
+          </Link>
+        ) : null}
+        {!hasStaffAccess ? (
+          <Link
+            href="/my-ebooks"
+            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+          >
+            My E-Books
             <span aria-hidden="true">&gt;</span>
           </Link>
         ) : null}
