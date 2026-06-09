@@ -109,10 +109,6 @@ function isActiveNavItem(pathname: string, originalHref: string, resolvedHref: s
     return pathname.startsWith("/user/holds");
   }
 
-  if (originalHref === "/ebook-catalog") {
-    return pathname.startsWith("/ebook-catalog") || pathname.startsWith("/my-ebooks");
-  }
-
   return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
 }
 
@@ -177,15 +173,6 @@ function UserMenu({
             className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
           >
             My holds
-            <span aria-hidden="true">&gt;</span>
-          </Link>
-        ) : null}
-        {!hasStaffAccess ? (
-          <Link
-            href="/my-ebooks"
-            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
-          >
-            My E-Books
             <span aria-hidden="true">&gt;</span>
           </Link>
         ) : null}
