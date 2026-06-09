@@ -10,6 +10,7 @@ import { Book } from "../types/catalog.type";
 import { getBook } from "../services/catalogService";
 import { authorLabel, availabilityLabel, availabilityTone, categoryLabel } from "./catalogHelpers";
 import { CatalogShell, Notice } from "./CatalogShell";
+import { EbookBorrowButton } from "@/features/ebook/components/EbookBorrowButton";
 
 export function BookDetailPage() {
   const params = useParams<{ bookId: string }>();

@@ -239,14 +239,14 @@ export function BooksExplorer({ initialQuery = "" }: BooksExplorerProps) {
                     <span className="inline-block rounded-full bg-white/20 px-3 py-1.5 text-xs font-bold uppercase tracking-wide backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:bg-white/30">
                       {categoryLabel(book.category)}
                     </span>
-                    <h2 className="mt-5 line-clamp-2 min-h-14 text-xl font-bold drop-shadow-md">
-                      {book.title}
-                    </h2>
                   </div>
                 </div>
 
                 <div className="p-5">
-                  <p className="text-sm text-[#333333]">
+                  <h2 className="line-clamp-2 min-h-14 text-xl font-bold text-[#000054]">
+                    {book.title}
+                  </h2>
+                  <p className="mt-2 text-sm text-[#333333]">
                     by {(book.authors ?? []).map(authorLabel).join(", ") || "Unknown author"}
                   </p>
 
@@ -261,10 +261,15 @@ export function BooksExplorer({ initialQuery = "" }: BooksExplorerProps) {
                     </div>
                   </dl>
 
-                  <div className="mt-5">
+                  <div className="mt-5 flex flex-wrap gap-2">
                     <span className={`rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition-all duration-200 group-hover:scale-105 ${availabilityTone(book)}`}>
                       {availabilityLabel(book)} copies
                     </span>
+                    {book.ebookUrl && (
+                      <span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 ring-1 ring-blue-200">
+                        Ebook available
+                      </span>
+                    )}
                   </div>
                 </div>
               </article>
