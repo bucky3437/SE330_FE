@@ -13,6 +13,36 @@ export function bookIdOf(book: Book) {
   return String(book.bookId ?? book.id ?? "");
 }
 
+export function categoryIdOf(book: Book) {
+  if (book.categoryId) return String(book.categoryId);
+  if (book.category && typeof book.category !== "string") {
+    return entityIdOf(book.category);
+  }
+
+  return "";
+}
+
+export function bookCoverUrl(book: Book, variant: "thumbnail" | "detail" | "original" = "thumbnail") {
+  if (variant === "detail") {
+    return book.coverImage?.detailUrl ?? book.coverImage?.originalUrl ?? book.imageUrl ?? book.coverImage?.thumbnailUrl ?? "";
+  }
+
+  if (variant === "original") {
+    return book.coverImage?.originalUrl ?? book.coverImage?.detailUrl ?? book.imageUrl ?? book.coverImage?.thumbnailUrl ?? "";
+  }
+
+  return book.coverImage?.thumbnailUrl ?? book.imageUrl ?? book.coverImage?.detailUrl ?? book.coverImage?.originalUrl ?? "";
+}
+
+export function bookCoverAlt(book: Book) {
+  return book.coverImage?.altText || `${book.title} cover`;
+}
+
+export function firstAuthorBio(book: Book) {
+  const firstAuthor = book.authors?.find((author): author is Author => typeof author !== "string" && Boolean(author.bio?.trim()));
+  return firstAuthor?.bio?.trim() ?? "";
+}
+
 export function availabilityLabel(book: Book) {
   const available = book.availableCopies ?? 0;
   const total = book.totalCopies ?? 0;

@@ -56,7 +56,7 @@ export function Button({
     primary:
       "bg-gradient-to-r from-[#E60028] to-[#c90022] text-white shadow-lg shadow-[#E60028]/25 hover:-translate-y-0.5 hover:shadow-[#E60028]/35 focus:ring-[#E60028]/20 disabled:from-gray-300 disabled:to-gray-400 disabled:shadow-none disabled:hover:translate-y-0",
     secondary:
-      "border-2 border-[#D9DCE8] bg-white text-black hover:border-black hover:bg-black/[0.04] focus:ring-black/10 disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-white",
+      "border-2 border-[#D9DCE8] bg-white text-black hover:border-black hover:bg-black hover:text-white focus:ring-black/10 disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-white disabled:hover:text-gray-400",
     ghost:
       "text-black hover:bg-black/[0.06] focus:ring-black/10 disabled:text-gray-400 disabled:hover:bg-transparent",
     danger:

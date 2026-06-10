@@ -185,7 +185,7 @@ export function AuthorsAdminPage() {
             <div className="rounded-xl border border-[#EDEDF2] bg-white p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">Authors shown</p>
               <p className="mt-2 text-3xl font-bold text-[#000054]">{authors.length}</p>
-              <p className="mt-1 text-sm text-[#333333]">{authorSearch ? `Filtered by "${authorSearch}"` : "Full author registry"}</p>
+              <p className="mt-1 text-sm text-[#333333]">{authorSearch ? `Filtered by "${authorSearch}"` : "First page of author registry"}</p>
             </div>
             <div className="rounded-xl border border-[#EDEDF2] bg-white p-4">
               <p className="text-xs font-bold uppercase tracking-wide text-[#337AB7]">Unsaved edits</p>

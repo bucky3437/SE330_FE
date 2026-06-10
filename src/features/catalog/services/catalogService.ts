@@ -6,6 +6,7 @@ import {
   Author,
   AuthorSearchParams,
   Book,
+  BookCoverImage,
   BookCopy,
   BookCopySearchParams,
   BookPayload,
@@ -19,6 +20,8 @@ import {
 } from "../types/catalog.type";
 
 const REQUEST_TIMEOUT_MS = 120000;
+const DEFAULT_AUTHOR_PAGE = "0";
+const DEFAULT_AUTHOR_PAGE_SIZE = "6";
 
 async function catalogFetch<T>(path: string, init?: RequestInit, accessToken?: string | null) {
   const body = await catalogFetchResponse<T>(path, init, accessToken);
@@ -236,6 +239,34 @@ export function updateBookAuthors(bookId: string, authorIds: number[], accessTok
   );
 }
 
+export function addBookCover(bookId: string, file: File, accessToken: string | null) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return catalogFetch<BookCoverImage>(
+    `/api/books/${bookId}/cover`,
+    {
+      method: "POST",
+      body: formData,
+    },
+    accessToken,
+  );
+}
+
+export function updateBookCover(bookId: string, file: File, accessToken: string | null) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return catalogFetch<BookCoverImage>(
+    `/api/books/${bookId}/cover`,
+    {
+      method: "PUT",
+      body: formData,
+    },
+    accessToken,
+  );
+}
+
 export function deleteBook(bookId: string, accessToken: string | null) {
   return catalogFetch<string>(`/api/books/${bookId}`, { method: "DELETE" }, accessToken);
 }
@@ -304,7 +335,7 @@ export async function importBooksCsv(file: File, accessToken: string | null) {
 }
 
 export function getAuthors(params: AuthorSearchParams = {}) {
-  return catalogFetch<Author[]>(`/api/authors${toQuery(params)}`);
+  return catalogFetch<Author[]>(`/api/authors${toQuery({ page: DEFAULT_AUTHOR_PAGE, size: DEFAULT_AUTHOR_PAGE_SIZE, ...params })}`);
 }
 
 export function createAuthor(payload: Pick<Author, "name" | "bio">, accessToken: string | null) {

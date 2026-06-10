@@ -12,15 +12,15 @@ type InstitutionalShellProps = {
 
 export function InstitutionalShell({ eyebrow, title, description, imageUrl, children }: InstitutionalShellProps) {
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="min-h-dvh bg-[#F8F9FA]">
       <Navbar />
-      <header className="relative min-h-[420px] overflow-hidden bg-[#000054]">
+      <header className="relative min-h-[calc(100dvh-4.5rem)] overflow-hidden bg-black">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${imageUrl})` }}
         />
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,40,0.88)_0%,rgba(0,0,84,0.70)_48%,rgba(0,0,84,0.28)_100%)]" />
-        <div className="relative mx-auto flex min-h-[420px] max-w-7xl flex-col justify-end px-5 py-14 text-white lg:px-8">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.62)_0%,rgba(0,0,0,0.42)_48%,rgba(0,0,0,0.16)_100%)]" />
+        <div className="relative mx-auto flex min-h-[calc(100dvh-4.5rem)] max-w-7xl flex-col justify-center px-5 pb-28 pt-14 text-white lg:px-8">
           <p className="text-sm font-bold uppercase tracking-wide text-[#51D2FF]">{eyebrow}</p>
           <h1 className="mt-4 max-w-4xl font-serif text-5xl font-bold leading-tight">{title}</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/85">{description}</p>

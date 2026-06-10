@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { ApiError } from "@/types/api.type";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { resendVerification } from "../services/authService";
 import { useAuth } from "../context/AuthContext";
 import { getZodFieldErrors, loginSchema, validateRequiredEmail } from "../validations/authValidation";
@@ -13,9 +14,62 @@ import { PasswordVisibilityButton } from "./PasswordVisibilityButton";
 const LOGIN_HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1760166699654-5d0e10f51994?auto=format&fit=crop&fm=jpg&q=80&w=2200";
 
+const loginCopy = {
+  en: {
+    heroBadge: "Digital library account",
+    heroTitle: "Borrow, reserve, and pick up without losing the thread.",
+    heroDescription: "Your Athenaeum account keeps loans, holds, pickup windows, and library notices in one calm workspace.",
+    stats: [
+      ["Live", "Loan status"],
+      ["Ready", "Pickup holds"],
+      ["Clear", "Due reminders"],
+    ],
+    photoCredit: "Photo by Fer Troulik on Unsplash",
+    secureAccess: "Secure access",
+    heading: "Welcome back",
+    description: "Sign in to continue managing your borrowing activity.",
+    email: "Email",
+    emailPlaceholder: "you@example.com",
+    password: "Password",
+    passwordPlaceholder: "Enter your password",
+    forgotPassword: "Forgot password?",
+    resendVerification: "Resend verification email",
+    signingIn: "Signing in...",
+    login: "Login",
+    newAccount: "New to The Athenaeum?",
+    createAccount: "Create an account",
+  },
+  vi: {
+    heroBadge: "Tài khoản thư viện số",
+    heroTitle: "Mượn, đặt giữ và nhận sách mà không bỏ lỡ thông tin.",
+    heroDescription: "Tài khoản Athenaeum giúp bạn theo dõi sách mượn, lượt đặt giữ, thời hạn nhận sách và thông báo thư viện trong một không gian gọn gàng.",
+    stats: [
+      ["Trực tiếp", "Trạng thái mượn"],
+      ["Sẵn sàng", "Sách chờ nhận"],
+      ["Rõ ràng", "Nhắc hạn trả"],
+    ],
+    photoCredit: "Ảnh bởi Fer Troulik trên Unsplash",
+    secureAccess: "Truy cập an toàn",
+    heading: "Chào mừng trở lại",
+    description: "Đăng nhập để tiếp tục quản lý hoạt động mượn sách của bạn.",
+    email: "Email",
+    emailPlaceholder: "you@example.com",
+    password: "Mật khẩu",
+    passwordPlaceholder: "Nhập mật khẩu",
+    forgotPassword: "Quên mật khẩu?",
+    resendVerification: "Gửi lại email xác minh",
+    signingIn: "Đang đăng nhập...",
+    login: "Đăng nhập",
+    newAccount: "Chưa có tài khoản The Athenaeum?",
+    createAccount: "Tạo tài khoản",
+  },
+};
+
 export function LoginForm() {
   const router = useRouter();
   const auth = useAuth();
+  const { locale } = useLanguage();
+  const copy = loginCopy[locale];
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +134,7 @@ export function LoginForm() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="relative min-h-screen overflow-hidden bg-[#050726] outline-none"
+      className="relative min-h-dvh overflow-hidden bg-[#050726] outline-none"
       style={{
         backgroundImage: `linear-gradient(105deg, rgba(0, 0, 0, 0.76) 0%, rgba(0, 0, 0, 0.52) 42%, rgba(0, 0, 0, 0.18) 68%, rgba(255, 255, 255, 0.08) 100%), url(${LOGIN_HERO_IMAGE_URL})`,
         backgroundPosition: "center",
@@ -88,25 +142,21 @@ export function LoginForm() {
       }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.05),transparent_28%)]" />
-      <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)]">
-        <section className="flex min-h-[48vh] flex-col justify-between px-6 pb-7 pt-5 text-white sm:px-10 lg:min-h-screen lg:px-14 lg:pt-5">
+      <div className="relative z-10 grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(420px,560px)]">
+        <section className="flex min-h-[48vh] flex-col justify-between px-6 pb-7 pt-5 text-white sm:px-10 lg:min-h-dvh lg:px-14 lg:pt-5">
           <BrandMark />
           <div className="max-w-2xl py-12 lg:py-0">
             <p className="animate-fade-up inline-flex w-fit rounded-full border border-white/25 bg-white/12 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-white shadow-lg shadow-black/15 backdrop-blur-md">
-              Digital library account
+              {copy.heroBadge}
             </p>
             <h1 className="animate-fade-up animate-delay-75 mt-5 max-w-2xl font-serif text-4xl font-bold leading-tight text-white drop-shadow-xl md:text-6xl">
-              Borrow, reserve, and pick up without losing the thread.
+              {copy.heroTitle}
             </h1>
             <p className="animate-fade-up animate-delay-150 mt-5 max-w-xl text-base leading-8 text-white/82 drop-shadow-md md:text-lg">
-              Your Athenaeum account keeps loans, holds, pickup windows, and library notices in one calm workspace.
+              {copy.heroDescription}
             </p>
             <div className="animate-fade-up animate-delay-225 mt-9 grid max-w-xl gap-3 sm:grid-cols-3">
-              {[
-                ["Live", "Loan status"],
-                ["Ready", "Pickup holds"],
-                ["Clear", "Due reminders"],
-              ].map(([value, label], index) => (
+              {copy.stats.map(([value, label], index) => (
                 <div
                   key={label}
                   className={`group rounded-2xl border border-white/16 bg-white/12 p-4 shadow-lg shadow-black/15 backdrop-blur-lg transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/18 ${
@@ -120,10 +170,10 @@ export function LoginForm() {
             </div>
           </div>
           <p className="text-[11px] font-semibold text-white/55">
-            Photo by Fer Troulik on Unsplash
+            {copy.photoCredit}
           </p>
         </section>
-        <section className="flex items-center justify-start px-5 py-10 sm:px-8 lg:min-h-screen lg:pl-4 lg:pr-12">
+        <section className="flex items-center justify-start px-5 py-10 sm:px-8 lg:min-h-dvh lg:pl-4 lg:pr-12">
           <div className="animate-scale-in w-full max-w-md rounded-[2rem] border border-white bg-white p-7 shadow-[0_30px_90px_rgba(0,0,84,0.26)] sm:p-8">
             <div className="mb-8">
               <div className="-mt-2 mb-5 flex items-center justify-between gap-4">
@@ -131,18 +181,18 @@ export function LoginForm() {
                   The Athenaeum
                 </Link>
                 <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-black">
-                  Secure access
+                  {copy.secureAccess}
                 </span>
               </div>
-              <h2 className="font-serif text-4xl font-bold text-black">Welcome back</h2>
+              <h2 className="font-serif text-4xl font-bold text-black">{copy.heading}</h2>
               <p className="mt-3 text-sm leading-6 text-black/75">
-                Sign in to continue managing your borrowing activity.
+                {copy.description}
               </p>
             </div>
             <form className="grid gap-5" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="email" className="text-sm font-bold text-black">
-                  Email
+                  {copy.email}
                 </label>
                 <input
                   id="email"
@@ -150,7 +200,7 @@ export function LoginForm() {
                   type="email"
                   autoComplete="email"
                   className="mt-2 h-[52px] w-full rounded-2xl border border-black/15 bg-white px-4 text-black shadow-sm outline-none transition-all duration-200 focus:border-2 focus:border-black focus:bg-white focus:shadow-[0_0_0_4px_rgba(0,0,0,0.1)]"
-                  placeholder="you@example.com"
+                  placeholder={copy.emailPlaceholder}
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   required
@@ -162,10 +212,10 @@ export function LoginForm() {
               <div>
                 <div className="flex items-center justify-between gap-4">
                   <label htmlFor="password" className="text-sm font-bold text-black">
-                    Password
+                    {copy.password}
                   </label>
                   <Link href="/forgot-password" className="auth-link-blue text-sm font-semibold transition-colors duration-200">
-                    Forgot password?
+                    {copy.forgotPassword}
                   </Link>
                 </div>
                 <div className="relative mt-2">
@@ -175,7 +225,7 @@ export function LoginForm() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     className="h-[52px] w-full rounded-2xl border border-black/15 bg-white px-4 pr-12 text-black shadow-sm outline-none transition-all duration-200 focus:border-2 focus:border-black focus:bg-white focus:shadow-[0_0_0_4px_rgba(0,0,0,0.1)]"
-                    placeholder="Enter your password"
+                    placeholder={copy.passwordPlaceholder}
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     required
@@ -198,7 +248,7 @@ export function LoginForm() {
                       className="auth-link-blue mt-2 block font-bold transition-colors duration-200"
                       onClick={handleResendVerification}
                     >
-                      Resend verification email
+                      {copy.resendVerification}
                     </button>
                   )}
                 </div>
@@ -215,13 +265,13 @@ export function LoginForm() {
                 {isLoading && (
                   <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 )}
-                {isLoading ? "Signing in..." : "Login"}
+                {isLoading ? copy.signingIn : copy.login}
               </button>
             </form>
             <p className="mt-6 text-center text-sm text-black/75">
-              New to The Athenaeum?{" "}
+              {copy.newAccount}{" "}
               <Link href="/register" className="auth-link-blue font-bold transition-colors duration-200">
-                Create an account
+                {copy.createAccount}
               </Link>
             </p>
           </div>
