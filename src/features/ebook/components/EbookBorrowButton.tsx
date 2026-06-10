@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { borrowEbook } from "../services/ebookService";
 import { EbookLoan } from "../types/ebook.type";
@@ -21,12 +22,14 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
   const [loan, setLoan] = useState<EbookLoan | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   if (!hasEbook) return null;
 
   async function handleBorrow() {
     if (!isAuthenticated) {
       window.location.href = "/login";
+      setShowLoginModal(true);
       return;
     }
     setLoading(true);
@@ -36,73 +39,83 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
       const result = await borrowEbook(bookId, accessToken, refreshToken);
       setLoan(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Không thể mượn ebook lúc này.");
+      setError(err instanceof Error ? err.message : "Could not borrow ebook at this time.");
     } finally {
       setLoading(false);
     }
   }
 
-  // Đã mượn thành công → hiển thị link đọc
   if (loan?.status === "ACTIVE" && loan.ebookReadUrl) {
     return (
-      <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
-        <p className="text-sm font-semibold text-green-800 mb-2">
-          ✅ Mượn ebook thành công!
-        </p>
-        <p className="text-xs text-green-700 mb-3">
-          Hết hạn:{" "}
-          {loan.expiresAt
-            ? new Date(loan.expiresAt).toLocaleDateString("vi-VN")
-            : "–"}
-        </p>
+      <div className="inline-flex flex-col gap-2">
         <a
           href={loan.ebookReadUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 rounded-lg bg-[#000054] px-4 py-2 text-sm font-semibold text-white hover:bg-[#000080] transition-colors"
+          className="group inline-flex items-center justify-center gap-2 rounded-full bg-[#000054] px-5 py-3 text-sm font-bold text-white outline-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#000080] hover:shadow-lg active:translate-y-0 active:scale-[0.98]"
         >
-          📖 Đọc ebook ngay
+          Read ebook
+          <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
         </a>
-        <a
-          href="/user/ebook-loans"
-          className="ml-3 text-xs text-[#337AB7] hover:underline"
-        >
-          Quản lý ebook
-        </a>
+        <p className="text-xs text-gray-500 text-center">
+          Expires {loan.expiresAt ? new Date(loan.expiresAt).toLocaleDateString("en-US") : "–"} ·{" "}
+          <Link href="/user/ebook-loans" className="text-[#337AB7] hover:underline">Manage</Link>
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="mt-4">
+    <div className="relative inline-flex flex-col items-center gap-1">
+      {/* Login modal */}
+      {showLoginModal && (
+        <>
+          <div
+            className="fixed inset-0 z-40"
+            onClick={() => setShowLoginModal(false)}
+          />
+          <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 w-64 rounded-xl border border-[#EDEDF2] bg-white p-4 shadow-xl">
+            <p className="text-sm font-semibold text-[#000054]">Sign in required</p>
+            <p className="mt-1 text-xs text-gray-500">
+              You need to log in to borrow ebooks.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <Link
+                href="/login"
+                className="flex-1 rounded-full bg-[#000054] px-3 py-2 text-center text-xs font-bold text-white hover:bg-[#000080] transition-colors"
+              >
+                Log in
+              </Link>
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="flex-1 rounded-full border border-[#EDEDF2] px-3 py-2 text-xs font-bold text-gray-500 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>Expand commentComment on lines R65 to R90
+        </>
+      )}
       {error && (
-        <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
-          {error}
-        </p>
+        <p className="mb-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700">{error}</p>
       )}
       <button
         onClick={handleBorrow}
         disabled={loading}
-        className="inline-flex items-center gap-2 rounded-lg border-2 border-[#000054] px-5 py-2.5 text-sm font-bold text-[#000054] hover:bg-[#000054] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="group inline-flex items-center justify-center gap-2 rounded-full border border-[#D9DCE8] bg-white px-5 py-3 text-sm font-bold text-[#000054] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[#337AB7] hover:text-[#E60028] hover:shadow-lg hover:shadow-[#000054]/10 active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {loading ? (
           <>
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-            Đang xử lý...
+            Processing...
           </>
         ) : (
-          <>📱 Mượn ebook miễn phí</>
+          <>
+            Borrow ebook
+            <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+          </>
         )}
       </button>
-      {!isAuthenticated && (
-        <p className="mt-1.5 text-xs text-gray-500">
-          Bạn cần{" "}
-          <a href="/login" className="text-[#337AB7] hover:underline font-medium">
-            đăng nhập
-          </a>{" "}
-          để mượn ebook.
-        </p>
-      )}
     </div>
   );
 }
