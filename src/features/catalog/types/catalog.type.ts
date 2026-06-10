@@ -10,6 +10,8 @@ export type Author = {
 export type AuthorSearchParams = {
   q?: string;
   name?: string;
+  page?: string;
+  size?: string;
 };
 
 export type Category = {
@@ -19,11 +21,27 @@ export type Category = {
   description?: string | null;
 };
 
+export type BookCoverImage = {
+  id?: number;
+  bookId?: number;
+  provider?: string | null;
+  publicId?: string | null;
+  originalUrl?: string | null;
+  thumbnailUrl?: string | null;
+  detailUrl?: string | null;
+  altText?: string | null;
+  isPrimary?: boolean;
+  status?: string | null;
+  oldImageStatus?: string | null;
+};
+
 export type Book = {
   bookId?: number;
   id?: number;
   title: string;
   isbn: string;
+  imageUrl?: string | null;
+  coverImage?: BookCoverImage | null;
   authors?: Author[] | string[];
   category?: Category | string | null;
   categoryId?: number | null;
@@ -32,6 +50,7 @@ export type Book = {
   edition?: string | null;
   totalCopies?: number;
   availableCopies?: number;
+  ebookUrl?: string | null;
 };
 
 export type BookCopy = {

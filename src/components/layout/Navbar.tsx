@@ -2,14 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { UsersRound } from "@/components/animate-ui/icons/users-round";
 import { publicNavItems } from "@/constants/nav-items";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { TranslationKey, useLanguage } from "@/features/i18n/context/LanguageContext";
 import { BrandMark } from "./BrandMark";
 
 type TopNavItem = {
-  label: string;
+  labelKey: TranslationKey;
   href: string;
   originalHref?: string;
+};
+
+const publicNavLabelKeys: Record<string, TranslationKey> = {
+  "/books": "nav.books",
+  "/borrowing-guide": "nav.borrowingGuide",
+  "/user/holds": "nav.reservations",
+  "/notices": "nav.libraryNotices",
+  "/about": "nav.about",
 };
 
 export function Navbar() {
@@ -21,20 +31,25 @@ export function Navbar() {
     isInitializing,
     logout,
   } = useAuth();
+  const { t } = useLanguage();
   const pathname = usePathname();
   const staffBooksHref = hasAdminAccess ? "/admin/books" : "/staff/books";
   const staffNavItems: TopNavItem[] = [
-    ...(hasAdminAccess ? [{ label: "Dashboard", href: "/admin/dashboard" }] : []),
-    { label: "Books", href: staffBooksHref, originalHref: "/books" },
-    { label: "Borrowing Guide", href: "/borrowing-guide" },
-    { label: "Library Notices", href: "/notices" },
-    { label: "About", href: "/about" },
-    { label: "Circulation", href: "/staff/circulation" },
-    { label: "Borrowers", href: "/staff/members" },
+    ...(hasAdminAccess ? [{ labelKey: "nav.dashboard", href: "/admin/dashboard" } as TopNavItem] : []),
+    { labelKey: "nav.books", href: staffBooksHref, originalHref: "/books" },
+    { labelKey: "nav.borrowingGuide", href: "/borrowing-guide" },
+    { labelKey: "nav.libraryNotices", href: "/notices" },
+    { labelKey: "nav.about", href: "/about" },
+    { labelKey: "nav.circulation", href: "/staff/circulation" },
+    { labelKey: "nav.borrowers", href: "/staff/members" },
   ];
   const topNavItems: TopNavItem[] = hasStaffAccess
     ? staffNavItems
-    : publicNavItems.map((item) => ({ ...item, originalHref: item.href }));
+    : publicNavItems.map((item) => ({
+        labelKey: publicNavLabelKeys[item.href],
+        href: item.href,
+        originalHref: item.href,
+      }));
 
   return (
     <header
@@ -52,11 +67,11 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`group relative rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-150 hover:bg-black/[0.06] hover:text-black ${
-                  isActive ? "bg-black/[0.06] text-black" : ""
+                className={`group relative rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-150 hover:bg-[#F1F2F4] hover:text-black ${
+                  isActive ? "bg-[#F1F2F4] text-black" : ""
                 }`}
               >
-                {item.label}
+                {t(item.labelKey)}
                 <span
                   className={`absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-[#E60028] transition-transform duration-200 ${
                     isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
@@ -66,9 +81,10 @@ export function Navbar() {
             );
           })}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
           {isInitializing ? (
-            <div className="h-10 w-10 animate-pulse rounded-full bg-[#EDEDF2]" aria-label="Checking session" />
+            <div className="h-9 w-9 animate-pulse rounded-full bg-[#EDEDF2]" aria-label="Checking session" />
           ) : isAuthenticated ? (
             <UserMenu
               currentUser={currentUser}
@@ -80,21 +96,54 @@ export function Navbar() {
             <>
               <Link
                 href="/login"
-                className="rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-75 hover:bg-black/[0.06] hover:text-black"
+                className="rounded-full px-3 py-2 text-sm font-semibold text-[#111827] transition-colors duration-75 hover:bg-[#F1F2F4] hover:text-black"
               >
-                Login
+                {t("nav.login")}
               </Link>
               <Link
                 href="/register"
                 className="rounded-full bg-gradient-to-r from-[#E60028] to-[#c90022] px-5 py-2 text-sm font-bold text-white shadow-lg shadow-[#E60028]/25 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-[#E60028]/35"
               >
-                Register
+                {t("nav.register")}
               </Link>
             </>
           )}
         </div>
       </nav>
     </header>
+  );
+}
+
+function LanguageToggle() {
+  const { nextLocale, toggleLocale, t } = useLanguage();
+  const nextLabel = nextLocale.toUpperCase();
+  const title = nextLocale === "vi" ? t("language.switchToVietnamese") : t("language.switchToEnglish");
+
+  return (
+    <button
+      type="button"
+      aria-label={title}
+      title={title}
+      onClick={toggleLocale}
+      className="inline-flex h-9 items-center gap-1.5 rounded-full px-2.5 text-sm font-bold text-[#4B5563] transition hover:bg-[#F1F2F4] hover:text-black focus:outline-none focus:ring-4 focus:ring-black/10"
+    >
+      <svg
+        aria-hidden="true"
+        className="h-[17px] w-[17px]"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+        viewBox="0 0 24 24"
+      >
+        <circle cx="12" cy="12" r="9" />
+        <path d="M3 12h18" />
+        <path d="M12 3c2.2 2.3 3.4 5.3 3.4 9s-1.2 6.7-3.4 9" />
+        <path d="M12 3C9.8 5.3 8.6 8.3 8.6 12s1.2 6.7 3.4 9" />
+      </svg>
+      <span className="leading-none">{nextLabel}</span>
+    </button>
   );
 }
 
@@ -123,56 +172,55 @@ function UserMenu({
   hasStaffAccess: boolean;
   onLogout: () => void;
 }) {
+  const { t } = useLanguage();
+
   return (
     <div className="group relative">
       <button
         type="button"
-        aria-label="Open user menu"
-        className="grid h-11 w-11 place-items-center rounded-full border border-[#EDEDF2] bg-white text-black shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_12px_28px_rgba(17,24,39,0.14)] focus:outline-none focus:ring-4 focus:ring-black/10"
+        aria-label={t("menu.openUserMenu")}
+        className="grid h-9 w-9 place-items-center rounded-full text-[#111827] transition-colors duration-150 hover:bg-[#F1F2F4] hover:text-black focus:outline-none focus:ring-4 focus:ring-black/10"
       >
-        <svg
-          aria-hidden="true"
-          className="h-6 w-6"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.9"
-          viewBox="0 0 24 24"
-        >
-          <path d="M20 21a8 8 0 0 0-16 0" />
-          <path d="M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
-        </svg>
+        <UsersRound animateOnHover size={18} aria-hidden="true" />
       </button>
 
       <div className="invisible absolute right-0 top-[calc(100%+12px)] w-64 translate-y-2 rounded-2xl border border-[#EDEDF2] bg-white p-2 opacity-0 shadow-[0_24px_60px_rgba(7,7,88,0.16)] transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
         <div className="px-3 py-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-black/70">Account</p>
-          <p className="mt-1 text-sm font-bold text-black">{currentUser?.fullName || "The Athenaeum member"}</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-black/70">{t("menu.account")}</p>
+          <p className="mt-1 text-sm font-bold text-black">{currentUser?.fullName || t("menu.memberFallback")}</p>
           <p className="mt-1 text-xs font-bold uppercase tracking-wide text-[#333333]/70">{currentUser?.role || "Member"}</p>
         </div>
         <Link
           href="/profile"
-          className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+          className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
         >
-          My profile
+          {t("menu.myProfile")}
           <span aria-hidden="true">&gt;</span>
         </Link>
         {!hasStaffAccess ? (
           <Link
             href="/user/loans"
+            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
+          >
+            {t("menu.myLoans")}
+            <span aria-hidden="true">&gt;</span>
+          </Link>
+        ) : null}
+        {!hasStaffAccess ? (
+          <Link
+            href="/user/ebook-loans"
             className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
           >
-            My loans
+            My ebooks
             <span aria-hidden="true">&gt;</span>
           </Link>
         ) : null}
         {!hasStaffAccess ? (
           <Link
             href="/user/holds"
-            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
           >
-            My holds
+            {t("menu.myHolds")}
             <span aria-hidden="true">&gt;</span>
           </Link>
         ) : null}
@@ -181,30 +229,30 @@ function UserMenu({
             <div className="my-2 h-px bg-[#EDEDF2]" />
             <Link
               href="/staff/circulation"
-              className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+              className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
             >
-              Circulation
+              {t("nav.circulation")}
               <span aria-hidden="true">&gt;</span>
             </Link>
             <Link
               href="/staff/loans"
-              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
             >
-              Active loans
+              {t("menu.activeLoans")}
               <span aria-hidden="true">&gt;</span>
             </Link>
             <Link
               href="/staff/holds"
-              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
             >
-              Holds
+              {t("menu.holds")}
               <span aria-hidden="true">&gt;</span>
             </Link>
             <Link
               href="/staff/books/import"
-              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
             >
-              Import CSV
+              {t("menu.importCsv")}
               <span aria-hidden="true">&gt;</span>
             </Link>
           </>
@@ -214,33 +262,33 @@ function UserMenu({
             <div className="my-2 h-px bg-[#EDEDF2]" />
             <Link
               href="/admin/dashboard"
-              className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028]/8"
+              className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028] hover:text-white"
             >
-              Admin dashboard
+              {t("menu.adminDashboard")}
               <span aria-hidden="true">&gt;</span>
             </Link>
             <Link
               href="/admin/books"
-              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028]/8"
+              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028] hover:text-white"
             >
-              Admin books
+              {t("menu.adminBooks")}
               <span aria-hidden="true">&gt;</span>
             </Link>
             <Link
               href="/admin/categories"
-              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028]/8"
+              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028] hover:text-white"
             >
-              Categories
+              {t("menu.categories")}
               <span aria-hidden="true">&gt;</span>
             </Link>
           </>
         ) : null}
         <button
           type="button"
-          className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-bold text-[#E60028] transition hover:bg-[#E60028]/8"
+          className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-bold text-[#E60028] transition hover:bg-[#E60028] hover:text-white"
           onClick={onLogout}
         >
-          Logout
+          {t("menu.logout")}
           <span aria-hidden="true">&gt;</span>
         </button>
       </div>

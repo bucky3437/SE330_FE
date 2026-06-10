@@ -5,6 +5,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandMark } from "@/components/layout/BrandMark";
 import { ApiError } from "@/types/api.type";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { registerAccount, resendVerification } from "../services/authService";
 import { getZodFieldErrors, registerSchema, validateRegisterPassword } from "../validations/authValidation";
 import { PasswordVisibilityButton } from "./PasswordVisibilityButton";
@@ -27,6 +28,91 @@ const initialForm: RegisterForm = {
 
 const REGISTER_HERO_IMAGE_URL =
   "https://images.unsplash.com/photo-1760166699654-5d0e10f51994?auto=format&fit=crop&fm=jpg&q=80&w=2200";
+
+const registerCopy = {
+  en: {
+    heroBadge: "Member registration",
+    heroTitle: "Build your personal library trail.",
+    heroDescription: "Join The Athenaeum to reserve books, follow pickup windows, and keep every loan moving from one account.",
+    photoCredit: "Photo by Fer Troulik on Unsplash",
+    newMember: "New member",
+    heading: "Create your account",
+    description: "Enter your details. We will send a verification link to your email.",
+    fields: {
+      fullName: "Full name",
+      fullNamePlaceholder: "Your full name",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      phone: "Phone",
+      phonePlaceholder: "Your phone number (optional)",
+      password: "Password",
+      passwordPlaceholder: "Create a password",
+      confirmPassword: "Confirm password",
+      confirmPasswordPlaceholder: "Confirm your password",
+    },
+    passwordStrength: "Password strength",
+    creating: "Creating account...",
+    createAccount: "Create account",
+    alreadyHaveAccount: "Already have an account?",
+    login: "Login",
+    steps: ["Register", "Verify email", "Activated"],
+    checkInbox: "Check your inbox",
+    verifyEmail: "Please verify your email",
+    sentTo: "We sent a verification link to",
+    pending: "Your account will stay pending until you confirm it.",
+    hints: [
+      "Check your spam or promotions folder if the email is not visible.",
+      "The verification link expires after 24 hours.",
+      "Only click the newest verification link once.",
+    ],
+    resendIn: "Resend in",
+    resendEmail: "Resend email",
+    backToLogin: "Back to login",
+    editDetails: "Need to edit details?",
+    backToRegistration: "Back to registration",
+  },
+  vi: {
+    heroBadge: "Đăng ký thành viên",
+    heroTitle: "Tạo hành trình thư viện cá nhân của bạn.",
+    heroDescription: "Tham gia The Athenaeum để đặt giữ sách, theo dõi thời hạn nhận sách và quản lý mọi khoản mượn từ một tài khoản.",
+    photoCredit: "Ảnh bởi Fer Troulik trên Unsplash",
+    newMember: "Thành viên mới",
+    heading: "Tạo tài khoản",
+    description: "Nhập thông tin của bạn. Chúng tôi sẽ gửi liên kết xác minh đến email.",
+    fields: {
+      fullName: "Họ và tên",
+      fullNamePlaceholder: "Họ và tên của bạn",
+      email: "Email",
+      emailPlaceholder: "you@example.com",
+      phone: "Số điện thoại",
+      phonePlaceholder: "Số điện thoại của bạn (không bắt buộc)",
+      password: "Mật khẩu",
+      passwordPlaceholder: "Tạo mật khẩu",
+      confirmPassword: "Xác nhận mật khẩu",
+      confirmPasswordPlaceholder: "Nhập lại mật khẩu",
+    },
+    passwordStrength: "Độ mạnh mật khẩu",
+    creating: "Đang tạo tài khoản...",
+    createAccount: "Tạo tài khoản",
+    alreadyHaveAccount: "Đã có tài khoản?",
+    login: "Đăng nhập",
+    steps: ["Đăng ký", "Xác minh email", "Kích hoạt"],
+    checkInbox: "Kiểm tra hộp thư",
+    verifyEmail: "Vui lòng xác minh email",
+    sentTo: "Chúng tôi đã gửi liên kết xác minh đến",
+    pending: "Tài khoản sẽ ở trạng thái chờ cho đến khi bạn xác nhận.",
+    hints: [
+      "Kiểm tra thư rác hoặc mục quảng cáo nếu không thấy email.",
+      "Liên kết xác minh hết hạn sau 24 giờ.",
+      "Chỉ bấm vào liên kết xác minh mới nhất một lần.",
+    ],
+    resendIn: "Gửi lại sau",
+    resendEmail: "Gửi lại email",
+    backToLogin: "Về đăng nhập",
+    editDetails: "Cần sửa thông tin?",
+    backToRegistration: "Quay lại đăng ký",
+  },
+};
 
 type RegisterFieldErrors = Partial<Record<keyof RegisterForm, string>>;
 
@@ -58,6 +144,8 @@ function isRegisterFormValid(form: RegisterForm) {
 
 export function RegisterFlow() {
   const router = useRouter();
+  const { locale } = useLanguage();
+  const copy = registerCopy[locale];
   const [form, setForm] = useState<RegisterForm>(initialForm);
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -124,7 +212,7 @@ export function RegisterFlow() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="relative min-h-screen overflow-hidden bg-[#050726] outline-none"
+      className="relative min-h-dvh overflow-hidden bg-[#050726] outline-none"
       style={{
         backgroundImage: `linear-gradient(105deg, rgba(0, 0, 0, 0.76) 0%, rgba(0, 0, 0, 0.52) 42%, rgba(0, 0, 0, 0.18) 68%, rgba(255, 255, 255, 0.08) 100%), url(${REGISTER_HERO_IMAGE_URL})`,
         backgroundPosition: "center",
@@ -132,29 +220,29 @@ export function RegisterFlow() {
       }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.05),transparent_28%)]" />
-      <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1fr)_minmax(460px,600px)]">
-        <section className="flex min-h-[48vh] flex-col justify-between px-6 py-7 text-white sm:px-10 lg:min-h-screen lg:px-14">
+      <div className="relative z-10 grid min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(460px,600px)]">
+        <section className="flex min-h-[48vh] flex-col justify-between px-6 py-7 text-white sm:px-10 lg:min-h-dvh lg:px-14">
           <BrandMark />
           <div className="max-w-2xl py-12 lg:py-0">
             <p className="animate-fade-up inline-flex w-fit rounded-full border border-white/25 bg-white/12 px-4 py-2 text-xs font-bold uppercase tracking-[0.22em] text-white shadow-lg shadow-black/15 backdrop-blur-md">
-              Member registration
+              {copy.heroBadge}
             </p>
             <h1 className="animate-fade-up animate-delay-75 mt-5 max-w-2xl font-serif text-4xl font-bold leading-tight text-white drop-shadow-xl md:text-6xl">
-              Build your personal library trail.
+              {copy.heroTitle}
             </h1>
             <p className="animate-fade-up animate-delay-150 mt-5 max-w-xl text-base leading-8 text-white/82 drop-shadow-md md:text-lg">
-              Join The Athenaeum to reserve books, follow pickup windows, and keep every loan moving from one account.
+              {copy.heroDescription}
             </p>
-            <StepIndicator currentStep={isSubmitted ? 2 : 1} />
+            <StepIndicator currentStep={isSubmitted ? 2 : 1} steps={copy.steps} />
           </div>
           <p className="text-[11px] font-semibold text-white/55">
-            Photo by Fer Troulik on Unsplash
+            {copy.photoCredit}
           </p>
         </section>
 
-        <section className="flex items-center justify-start px-5 py-10 sm:px-8 lg:min-h-screen lg:pl-4 lg:pr-12">
+        <section className="flex items-center justify-start px-5 py-10 sm:px-8 lg:min-h-dvh lg:pl-4 lg:pr-12">
           {isSubmitted ? (
-            <VerificationPending email={form.email} cooldown={cooldown} onResend={handleResend} />
+            <VerificationPending email={form.email} cooldown={cooldown} onResend={handleResend} copy={copy} />
           ) : (
             <div className="animate-scale-in w-full max-w-lg rounded-[2rem] border border-white bg-white p-7 shadow-[0_30px_90px_rgba(0,0,84,0.26)] sm:p-8">
               <div className="mb-8">
@@ -163,41 +251,41 @@ export function RegisterFlow() {
                     The Athenaeum
                   </Link>
                   <span className="rounded-full border border-black/10 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-black">
-                    New member
+                    {copy.newMember}
                   </span>
                 </div>
-                <h2 className="font-serif text-4xl font-bold text-black">Create your account</h2>
+                <h2 className="font-serif text-4xl font-bold text-black">{copy.heading}</h2>
                 <p className="mt-3 text-sm leading-6 text-black/75">
-                  Enter your details. We will send a verification link to your email.
+                  {copy.description}
                 </p>
               </div>
 
               <form className="grid gap-4" onSubmit={handleSubmit}>
                 <Field
                   id="fullName"
-                  label="Full name"
+                  label={copy.fields.fullName}
                   value={form.fullName}
-                  placeholder="Your full name"
+                  placeholder={copy.fields.fullNamePlaceholder}
                   autoComplete="name"
                   error={fieldErrors.fullName}
                   onChange={(value) => updateField("fullName", value)}
                 />
                 <Field
                   id="email"
-                  label="Email"
+                  label={copy.fields.email}
                   type="email"
                   value={form.email}
-                  placeholder="you@example.com"
+                  placeholder={copy.fields.emailPlaceholder}
                   autoComplete="email"
                   error={fieldErrors.email}
                   onChange={(value) => updateField("email", value)}
                 />
                 <Field
                   id="phone"
-                  label="Phone"
+                  label={copy.fields.phone}
                   type="tel"
                   value={form.phone}
-                  placeholder="Your phone number (optional)"
+                  placeholder={copy.fields.phonePlaceholder}
                   autoComplete="tel"
                   error={fieldErrors.phone}
                   onChange={(value) => updateField("phone", value)}
@@ -205,7 +293,7 @@ export function RegisterFlow() {
                 <div>
                   <div className="flex items-center justify-between gap-4">
                     <label htmlFor="password" className="text-sm font-bold text-black">
-                      Password
+                      {copy.fields.password}
                     </label>
                   </div>
                   <div className="relative mt-2">
@@ -215,7 +303,7 @@ export function RegisterFlow() {
                       type={showPassword ? "text" : "password"}
                       autoComplete="new-password"
                       className="h-[50px] w-full rounded-2xl border border-black/15 bg-white px-4 pr-12 text-black shadow-sm outline-none transition-all duration-200 focus:border-2 focus:border-black focus:bg-white focus:shadow-[0_0_0_4px_rgba(0,0,0,0.1)]"
-                      placeholder="Create a password"
+                      placeholder={copy.fields.passwordPlaceholder}
                       value={form.password}
                       onChange={(event) => updateField("password", event.target.value)}
                     />
@@ -228,7 +316,7 @@ export function RegisterFlow() {
                     <div className="h-2 overflow-hidden rounded-full bg-[#EDEDF2]">
                       <div className={`h-full rounded-full ${strength.width} ${strength.color} transition-all duration-300`} />
                     </div>
-                    <p className="mt-2 text-xs font-semibold text-black/75">Password strength: {strength.label}</p>
+                    <p className="mt-2 text-xs font-semibold text-black/75">{copy.passwordStrength}: {strength.label}</p>
                     {!passwordMeetsRules && form.password.length > 0 && (
                       <p className="mt-2 animate-fade-up text-xs font-semibold text-[#E60028]">
                         {passwordError}
@@ -243,10 +331,10 @@ export function RegisterFlow() {
                 </div>
                 <Field
                   id="confirmPassword"
-                  label="Confirm password"
+                  label={copy.fields.confirmPassword}
                   type={showPassword ? "text" : "password"}
                   value={form.confirmPassword}
-                  placeholder="Confirm your password"
+                  placeholder={copy.fields.confirmPasswordPlaceholder}
                   autoComplete="new-password"
                   error={fieldErrors.confirmPassword}
                   hasPasswordToggle
@@ -268,14 +356,14 @@ export function RegisterFlow() {
                   {isSubmitting && (
                     <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   )}
-                  {isSubmitting ? "Creating account..." : "Create account"}
+                  {isSubmitting ? copy.creating : copy.createAccount}
                 </button>
               </form>
 
               <p className="mt-6 text-center text-sm text-black/75">
-                Already have an account?{" "}
+                {copy.alreadyHaveAccount}{" "}
                 <Link href="/login" className="auth-link-blue font-bold transition-colors duration-200">
-                  Login
+                  {copy.login}
                 </Link>
               </p>
             </div>
@@ -354,9 +442,7 @@ function Field({
   );
 }
 
-function StepIndicator({ currentStep }: { currentStep: 1 | 2 | 3 }) {
-  const steps = ["Register", "Verify email", "Activated"];
-
+function StepIndicator({ currentStep, steps }: { currentStep: 1 | 2 | 3; steps: string[] }) {
   return (
     <div className="animate-fade-up animate-delay-225 mt-9 grid max-w-xl gap-3 sm:grid-cols-3">
       {steps.map((step, index) => {
@@ -393,26 +479,23 @@ function VerificationPending({
   email,
   cooldown,
   onResend,
+  copy,
 }: {
   email: string;
   cooldown: number;
   onResend: () => void;
+  copy: typeof registerCopy.en;
 }) {
   return (
     <div className="animate-scale-in w-full max-w-lg rounded-[2rem] border border-white bg-white p-8 shadow-[0_30px_90px_rgba(0,0,84,0.26)]">
-      <p className="text-sm font-bold uppercase tracking-wide text-black">Check your inbox</p>
-      <h2 className="mt-3 font-serif text-3xl font-bold text-black">Please verify your email</h2>
+      <p className="text-sm font-bold uppercase tracking-wide text-black">{copy.checkInbox}</p>
+      <h2 className="mt-3 font-serif text-3xl font-bold text-black">{copy.verifyEmail}</h2>
       <p className="mt-3 text-sm leading-6 text-black/75">
-        We sent a verification link to <span className="font-bold text-black">{email}</span>. Your account will stay
-        pending until you confirm it.
+        {copy.sentTo} <span className="font-bold text-black">{email}</span>. {copy.pending}
       </p>
 
       <div className="mt-6 grid gap-3">
-        {[
-          "Check your spam or promotions folder if the email is not visible.",
-          "The verification link expires after 24 hours.",
-          "Only click the newest verification link once.",
-        ].map((hint, index) => (
+        {copy.hints.map((hint, index) => (
           <div
             key={hint}
             className={`animate-fade-up rounded-xl border border-black/10 bg-black/[0.03] p-4 text-sm leading-6 text-black/75 shadow-sm ${
@@ -431,20 +514,20 @@ function VerificationPending({
           className="h-[52px] rounded-2xl bg-[#E60028] px-5 text-sm font-bold text-white shadow-lg shadow-[#E60028]/30 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#C90022] hover:shadow-xl hover:shadow-[#E60028]/40 disabled:cursor-not-allowed disabled:bg-[#B8BBC8] disabled:shadow-none disabled:hover:translate-y-0"
           onClick={onResend}
         >
-          {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend email"}
+          {cooldown > 0 ? `${copy.resendIn} ${cooldown}s` : copy.resendEmail}
         </button>
         <Link
           href="/login"
           className="inline-flex h-[52px] items-center justify-center rounded-2xl border-2 border-black px-5 text-sm font-bold text-black transition-all duration-200 hover:-translate-y-0.5 hover:bg-black hover:text-white hover:shadow-md"
         >
-          Back to login
+          {copy.backToLogin}
         </Link>
       </div>
 
       <p className="mt-5 text-center text-sm text-black/75">
-        Need to edit details?{" "}
+        {copy.editDetails}{" "}
         <button type="button" className="auth-link-blue font-bold transition-colors duration-200" onClick={() => window.location.reload()}>
-          Back to registration
+          {copy.backToRegistration}
         </button>
       </p>
     </div>

@@ -4,11 +4,59 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { CatalogShell, Notice } from "@/features/catalog/components/CatalogShell";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { HoldRecord } from "../types/circulation.type";
 import { cancelHold, getMyHolds } from "../services/circulationService";
-import { formatDate, recordId, titleOf } from "./circulationHelpers";
+import { formatDate, recordId, statusLabel, titleOf } from "./circulationHelpers";
+
+const copy = {
+  en: {
+    eyebrow: "My holds",
+    title: "Reserved and queued books",
+    description: "Follow active reservations and review completed pickup history from one place.",
+    loading: "Loading holds...",
+    loadError: "Could not load holds.",
+    cancelConfirm: "Cancel this hold?",
+    cancelled: "Hold was cancelled.",
+    cancelError: "Could not cancel hold.",
+    activeTab: "Active holds",
+    historyTab: "History",
+    emptyActive: "No active holds right now.",
+    emptyHistory: "No hold history found.",
+    headings: ["Book", "Status", "Queue", "Assigned barcode", "Placed", "Pickup expires", "Action"],
+    cancelling: "Cancelling",
+    cancel: "Cancel",
+    viewLoan: "View loan",
+    reserveAgain: "Reserve again",
+    expired: "Expired",
+    noAction: "No action",
+  },
+  vi: {
+    eyebrow: "Lượt đặt giữ",
+    title: "Sách đã đặt giữ và đang xếp hàng",
+    description: "Theo dõi lượt giữ đang hoạt động và xem lại lịch sử nhận sách.",
+    loading: "Đang tải lượt đặt giữ...",
+    loadError: "Không thể tải danh sách đặt giữ.",
+    cancelConfirm: "Bạn muốn hủy lượt giữ này?",
+    cancelled: "Đã hủy lượt giữ.",
+    cancelError: "Không thể hủy lượt giữ.",
+    activeTab: "Đang hoạt động",
+    historyTab: "Lịch sử",
+    emptyActive: "Hiện không có lượt giữ đang hoạt động.",
+    emptyHistory: "Chưa có lịch sử đặt giữ.",
+    headings: ["Sách", "Trạng thái", "Hàng đợi", "Mã bản sao", "Ngày đặt", "Hết hạn nhận", "Thao tác"],
+    cancelling: "Đang hủy",
+    cancel: "Hủy",
+    viewLoan: "Xem lượt mượn",
+    reserveAgain: "Đặt lại",
+    expired: "Đã hết hạn",
+    noAction: "Không có thao tác",
+  },
+};
 
 export function UserHoldsPage() {
+  const { locale } = useLanguage();
+  const text = copy[locale];
   const { accessToken, refresh } = useAuth();
   const [holds, setHolds] = useState<HoldRecord[]>([]);
   const [message, setMessage] = useState("");
@@ -21,7 +69,7 @@ export function UserHoldsPage() {
   const activeHolds = useMemo(() => visibleHolds.filter(canCancelHold), [visibleHolds]);
   const historyHolds = useMemo(() => visibleHolds.filter((hold) => !canCancelHold(hold)), [visibleHolds]);
   const displayedHolds = holdView === "active" ? activeHolds : historyHolds;
-  const emptyMessage = holdView === "active" ? "No active holds right now." : "No hold history found.";
+  const emptyMessage = holdView === "active" ? text.emptyActive : text.emptyHistory;
 
   useEffect(() => {
     let isMounted = true;
@@ -33,7 +81,7 @@ export function UserHoldsPage() {
         }
       })
       .catch((fetchError) => {
-        if (isMounted) setError(fetchError instanceof Error ? fetchError.message : "Could not load holds.");
+        if (isMounted) setError(fetchError instanceof Error ? fetchError.message : text.loadError);
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -42,20 +90,20 @@ export function UserHoldsPage() {
     return () => {
       isMounted = false;
     };
-  }, [accessToken, message, refreshAccessToken]);
+  }, [accessToken, message, refreshAccessToken, text.loadError]);
 
   async function handleCancel(holdId: string) {
     if (!holdId || cancellingHoldId) return;
-    if (!window.confirm("Cancel this hold?")) return;
+    if (!window.confirm(text.cancelConfirm)) return;
 
     try {
       setCancellingHoldId(holdId);
       await cancelHold(holdId, accessToken, refreshAccessToken);
       setHolds((currentHolds) => currentHolds.filter((hold) => recordId(hold) !== holdId));
-      setMessage("Hold was cancelled.");
+      setMessage(text.cancelled);
       setError("");
     } catch (cancelError) {
-      setError(cancelError instanceof Error ? cancelError.message : "Could not cancel hold.");
+      setError(cancelError instanceof Error ? cancelError.message : text.cancelError);
     } finally {
       setCancellingHoldId("");
     }
@@ -64,12 +112,12 @@ export function UserHoldsPage() {
   return (
     <CatalogShell
       protectedPage
-      eyebrow="My holds"
-      title="Reserved and queued books"
-      description="Follow active reservations and review completed pickup history from one place."
+      eyebrow={text.eyebrow}
+      title={text.title}
+      description={text.description}
     >
       <div className="grid gap-3">
-        {isLoading ? <Notice message="Loading holds..." /> : null}
+        {isLoading ? <Notice message={text.loading} /> : null}
         {message ? <Notice tone="success" message={message} /> : null}
         {error ? <Notice tone="error" message={error} /> : null}
       </div>
@@ -83,7 +131,7 @@ export function UserHoldsPage() {
               : "text-[#333333] hover:bg-[#F8F9FA] hover:text-[#000054]"
           }`}
         >
-          Active holds
+          {text.activeTab}
           <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${holdView === "active" ? "bg-white/15 text-white" : "bg-[#EDEDF2] text-[#000054]"}`}>
             {activeHolds.length}
           </span>
@@ -97,7 +145,7 @@ export function UserHoldsPage() {
               : "text-[#333333] hover:bg-[#F8F9FA] hover:text-[#000054]"
           }`}
         >
-          History
+          {text.historyTab}
           <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${holdView === "history" ? "bg-white/15 text-white" : "bg-[#EDEDF2] text-[#000054]"}`}>
             {historyHolds.length}
           </span>
@@ -106,22 +154,22 @@ export function UserHoldsPage() {
       <div className="mt-4 overflow-x-auto rounded-xl border border-[#EDEDF2]">
         <table className="w-full min-w-[980px] border-collapse bg-white text-left text-sm">
           <thead className="bg-[#000054] text-white">
-            <tr>{["Book", "Status", "Queue", "Assigned barcode", "Placed", "Pickup expires", "Action"].map((heading) => <th key={heading} className="px-4 py-3">{heading}</th>)}</tr>
+            <tr>{text.headings.map((heading) => <th key={heading} className="px-4 py-3">{heading}</th>)}</tr>
           </thead>
           <tbody>
             {displayedHolds.map((hold) => {
               const id = recordId(hold);
               const isCancelling = cancellingHoldId === id;
               const canCancel = canCancelHold(hold);
-              const fallbackAction = holdFallbackAction(hold);
+              const fallbackAction = holdFallbackAction(hold, locale);
               return (
                 <tr key={id} className={`border-t border-[#EDEDF2] transition ${isCancelling ? "bg-rose-50/45" : "hover:bg-[#F8F9FA]"}`}>
                   <td className="px-4 py-4 font-bold text-[#000054]">{titleOf(hold)}</td>
-                  <td className="px-4 py-4">{hold.status ?? "-"}</td>
+                  <td className="px-4 py-4">{statusLabel(hold.status, locale)}</td>
                   <td className="px-4 py-4">{hold.queuePosition ?? "-"}</td>
                   <td className="px-4 py-4">{hold.assignedBarcode ?? hold.barcode ?? "-"}</td>
-                  <td className="px-4 py-4">{formatDate(hold.placedAt ?? hold.createdAt)}</td>
-                  <td className="px-4 py-4">{formatDate(hold.pickupExpiresAt ?? hold.expiresAt)}</td>
+                  <td className="px-4 py-4">{formatDate(hold.placedAt ?? hold.createdAt, locale)}</td>
+                  <td className="px-4 py-4">{formatDate(hold.pickupExpiresAt ?? hold.expiresAt, locale)}</td>
                   <td className="px-4 py-4">
                     {canCancel ? (
                       <button
@@ -134,11 +182,11 @@ export function UserHoldsPage() {
                         {isCancelling ? (
                           <span className="relative inline-flex items-center gap-2">
                             <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-rose-300 border-t-rose-700" />
-                            Cancelling
+                            {text.cancelling}
                           </span>
                         ) : (
                           <span className="relative inline-flex items-center gap-2">
-                            Cancel
+                            {text.cancel}
                             <span aria-hidden="true" className="transition-transform duration-200 group-hover:rotate-90 group-hover:scale-110">
                               ×
                             </span>
@@ -183,31 +231,32 @@ function normalizeHoldStatus(hold: HoldRecord) {
   return hold.status?.trim().toUpperCase();
 }
 
-function holdFallbackAction(hold: HoldRecord) {
+function holdFallbackAction(hold: HoldRecord, locale: "en" | "vi") {
   const status = normalizeHoldStatus(hold);
+  const text = copy[locale];
   if (status === "FULFILLED") {
     return {
-      label: "View loan",
+      label: text.viewLoan,
       href: "/user/loans",
       className: "border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-100",
     };
   }
   if (status === "EXPIRED" && hold.bookId) {
     return {
-      label: "Reserve again",
+      label: text.reserveAgain,
       href: `/books/${hold.bookId}`,
       className: "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100",
     };
   }
   if (status === "EXPIRED") {
     return {
-      label: "Expired",
+      label: text.expired,
       href: "",
       className: "border-amber-200 bg-amber-50 text-amber-700",
     };
   }
   return {
-    label: "No action",
+    label: text.noAction,
     href: "",
     className: "border-[#D9DCE8] bg-[#F8F9FA] text-[#6B7280]",
   };
