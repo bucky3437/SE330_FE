@@ -20,6 +20,7 @@ import {
   firstAuthorBio,
 } from "./catalogHelpers";
 import { CatalogShell, Notice } from "./CatalogShell";
+import { EbookBorrowButton } from "@/features/ebook/components/EbookBorrowButton";
 
 const copy = {
   en: {

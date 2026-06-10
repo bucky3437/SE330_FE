@@ -208,6 +208,15 @@ function UserMenu({
         ) : null}
         {!hasStaffAccess ? (
           <Link
+            href="/user/ebook-loans"
+            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black/[0.06] hover:text-black"
+          >
+            My ebooks
+            <span aria-hidden="true">&gt;</span>
+          </Link>
+        ) : null}
+        {!hasStaffAccess ? (
+          <Link
             href="/user/holds"
             className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
           >

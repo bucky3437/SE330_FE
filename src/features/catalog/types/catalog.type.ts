@@ -50,6 +50,7 @@ export type Book = {
   edition?: string | null;
   totalCopies?: number;
   availableCopies?: number;
+  ebookUrl?: string | null;
 };
 
 export type BookCopy = {
