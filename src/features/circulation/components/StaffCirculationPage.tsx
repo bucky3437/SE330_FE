@@ -7,6 +7,7 @@ import { CatalogShell, Notice, SecondaryAction } from "@/features/catalog/compon
 import { CheckinResponse, CheckoutPreviewResponse, CheckoutRequest, CheckoutResponse } from "../types/circulation.type";
 import { checkinCopy, confirmCheckout, previewCheckout, staffRenewBorrow } from "../services/circulationService";
 import { formatDate, money } from "./circulationHelpers";
+import { BorrowReceipt } from "./BorrowReceipt";
 
 export function StaffCirculationPage() {
   const { accessToken, hasStaffAccess, refresh } = useAuth();
@@ -116,8 +117,10 @@ export function StaffCirculationPage() {
   }
 
   return (
-    <CatalogShell
-      protectedPage
+    <>
+      <div className="print:hidden">
+        <CatalogShell
+          protectedPage
       eyebrow="Circulation desk"
       title="Borrowing and returns"
       description="Run checkout previews, confirm loans, process returns, and support staff renewals at the desk."
@@ -160,7 +163,14 @@ export function StaffCirculationPage() {
           </form>
           <ResultCard title="Preview result">
             {preview ? <CheckoutPreviewPanel preview={preview} fallbackBarcode={checkoutPayload?.itemBarcode} /> : <Notice message="Preview details will appear here." />}
-            {checkoutResult ? <div className="mt-4"><Notice tone="success" message={`Borrow ${checkoutResult.borrowId ?? checkoutResult.id ?? ""} created.`} /></div> : null}
+            {checkoutResult ? (
+              <div className="mt-4 space-y-3">
+                <Notice tone="success" message={`Borrow ${checkoutResult.borrowId ?? checkoutResult.id ?? ""} created.`} />
+                <button type="button" onClick={() => window.print()} className="w-full rounded-full border border-[#D9DCE8] bg-white px-5 py-3 text-sm font-bold text-[#000054] hover:bg-gray-50">
+                  Print Receipt
+                </button>
+              </div>
+            ) : null}
           </ResultCard>
         </div>
       ) : null}
@@ -200,6 +210,11 @@ export function StaffCirculationPage() {
         </form>
       ) : null}
     </CatalogShell>
+      </div>
+      <div className="hidden print:block absolute top-0 left-0 bg-white min-h-screen w-full">
+        <BorrowReceipt receiptData={checkoutResult} />
+      </div>
+    </>
   );
 }
 
@@ -266,7 +281,11 @@ function CheckoutPreviewPanel({ fallbackBarcode, preview }: { fallbackBarcode?: 
         <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <h3 className="text-xs font-bold uppercase tracking-wide text-amber-800">Notes</h3>
           <ul className="mt-2 grid gap-2 text-sm font-semibold text-amber-900">
-            {reasons.map((item) => <li key={item}>{item}</li>)}
+            {reasons.map((item, index) => {
+              const text = typeof item === "string" ? item : (item as any)?.message || JSON.stringify(item);
+              const key = typeof item === "string" ? item : (item as any)?.code || String(index);
+              return <li key={`${key}-${index}`}>{text}</li>;
+            })}
           </ul>
         </section>
       ) : null}
