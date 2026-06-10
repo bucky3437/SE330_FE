@@ -668,3 +668,49 @@ button[class~="rounded-full"][class~="border-[#D9DCE8]"]:not(:disabled):hover {
 .auth-link-blue:hover {
   -webkit-text-fill-color: currentColor;
 }
+
+.books-filter-fields {
+  flex-direction: row;
+}
+
+.books-filter-search,
+.books-filter-select,
+.books-filter-sort,
+.books-filter-more,
+.books-filter-reset {
+  flex: 0 0 100%;
+  width: 100%;
+}
+
+@media (min-width: 1280px) {
+  .books-filter-fields {
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+
+  .books-filter-search {
+    flex: 1 1 auto;
+    min-width: 360px;
+    width: auto;
+  }
+
+  .books-filter-select {
+    flex: 0 0 12rem;
+    width: 12rem;
+  }
+
+  .books-filter-sort {
+    flex: 0 0 11rem;
+    width: 11rem;
+  }
+
+  .books-filter-more {
+    flex: 0 0 10rem;
+    width: 10rem;
+  }
+
+  .books-filter-reset {
+    flex: 0 0 7rem;
+    width: 7rem;
+  }
+}

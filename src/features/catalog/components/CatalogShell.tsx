@@ -17,9 +17,22 @@ type CatalogShellProps = {
   protectedPage?: boolean;
   wide?: boolean;
   frameless?: boolean;
+  catalogPanel?: boolean;
+  compactPanelHeader?: boolean;
 };
 
-export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false, frameless = false }: CatalogShellProps) {
+export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false, frameless = false, catalogPanel = false, compactPanelHeader = false }: CatalogShellProps) {
+  const framedSectionClass = catalogPanel
+    ? "relative overflow-hidden rounded-[32px] border border-black/10 bg-white/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.08)] md:p-10 lg:p-12"
+    : "rounded-2xl border border-[#EDEDF2] bg-white p-6 shadow-[0_24px_60px_rgba(7,7,88,0.08)] md:p-8";
+  const catalogTitleClass = compactPanelHeader
+    ? "mt-3 font-serif text-5xl font-bold leading-tight tracking-[-0.035em] text-[#0B1026] md:text-6xl"
+    : "mt-4 font-serif text-5xl font-normal leading-none tracking-[-0.04em] text-[#151515] md:text-6xl lg:text-7xl";
+  const catalogDescriptionClass = compactPanelHeader
+    ? "mt-3 max-w-2xl text-base leading-7 text-[#59637A]"
+    : "mt-5 max-w-2xl text-lg leading-8 text-[#555555]";
+  const catalogHeaderClass = compactPanelHeader ? "lg:flex-row lg:items-start" : "lg:flex-row lg:items-end";
+
   return (
     <ProtectedGate enabled={protectedPage}>
       <div className="min-h-dvh bg-[#F8F9FA]">
@@ -40,22 +53,50 @@ export function CatalogShell({ eyebrow, title, description, children, actions, p
               <div className="mt-4">{children}</div>
             </>
           ) : (
-            <section className="rounded-2xl border border-[#EDEDF2] bg-white p-6 shadow-[0_24px_60px_rgba(7,7,88,0.08)] md:p-8">
-              <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{eyebrow}</p>
-                  <h1 className="mt-3 font-serif text-4xl font-bold text-[#000054]">{title}</h1>
-                  <p className="mt-3 max-w-3xl leading-7 text-[#333333]">{description}</p>
+            <section className={framedSectionClass}>
+              {catalogPanel ? <CatalogPanelLines /> : null}
+              <div className={`flex flex-col justify-between gap-5 ${catalogHeaderClass}`}>
+                <div className="relative z-10">
+                  <p className={catalogPanel ? "text-xs font-black uppercase tracking-[0.42em] text-[#242424]" : "text-sm font-bold uppercase tracking-wide text-[#337AB7]"}>
+                    {eyebrow}
+                  </p>
+                  <h1 className={catalogPanel ? catalogTitleClass : "mt-3 font-serif text-4xl font-bold text-[#000054]"}>
+                    {title}
+                  </h1>
+                  <p className={catalogPanel ? catalogDescriptionClass : "mt-3 max-w-3xl leading-7 text-[#333333]"}>
+                    {description}
+                  </p>
                 </div>
-                {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+                {actions ? <div className="relative z-10 flex flex-wrap gap-3">{actions}</div> : null}
               </div>
-              <div className="mt-8">{children}</div>
+              <div className={catalogPanel ? `relative z-10 ${compactPanelHeader ? "mt-8" : "mt-10"}` : "mt-8"}>{children}</div>
             </section>
           )}
         </main>
         <Footer />
       </div>
     </ProtectedGate>
+  );
+}
+
+function CatalogPanelLines() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute right-0 top-0 h-80 w-[58%] text-black/10"
+      viewBox="0 0 820 340"
+      fill="none"
+      preserveAspectRatio="none"
+    >
+      {Array.from({ length: 9 }).map((_, index) => (
+        <path
+          key={index}
+          d={`M${40 + index * 18} 330C190 ${128 - index * 10} 356 ${118 + index * 14} 482 ${166 - index * 8}C622 ${220 + index * 4} 670 ${36 + index * 12} 828 ${18 + index * 8}`}
+          stroke="currentColor"
+          strokeWidth="1"
+        />
+      ))}
+    </svg>
   );
 }
 

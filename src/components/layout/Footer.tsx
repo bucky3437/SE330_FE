@@ -52,28 +52,9 @@ export function Footer() {
 
   return (
     <footer className="w-full bg-[#050505] text-white">
-      <div className="w-full overflow-hidden bg-white">
-        <div className="grid min-h-[270px] w-full items-center gap-8 px-8 py-12 text-[#202020] md:grid-cols-[0.8fr_1.5fr_0.5fr] lg:px-16 xl:px-24">
-          <p className="max-w-32 text-sm font-bold uppercase leading-none tracking-tight text-[#333333]">
-            {copy.ctaKicker} <span aria-hidden="true">-&gt;</span>
-          </p>
-          <Link href="/about" className="group w-fit">
-            <span className="block text-5xl font-medium tracking-[-0.04em] text-[#202020] sm:text-6xl lg:text-7xl">
-              {copy.ctaTitle}
-            </span>
-            <span className="mt-2 block h-px w-full origin-left bg-[#DFFF00] transition-transform duration-300 group-hover:scale-x-75" />
-          </Link>
-          <Link
-            href="/about"
-            aria-label={copy.ctaTitle}
-            className="ml-auto grid h-16 w-16 place-items-center rounded-full bg-[#DFFF00] text-2xl font-medium text-black transition hover:scale-105 hover:bg-black hover:text-white"
-          >
-            <span aria-hidden="true">-&gt;</span>
-          </Link>
-        </div>
-
+      <div className="w-full overflow-hidden">
         <div className="bg-[radial-gradient(circle_at_20%_0%,#232323_0%,#111111_42%,#050505_100%)]">
-          <div className="grid min-h-[500px] w-full gap-12 px-8 py-20 md:grid-cols-[0.95fr_0.85fr_1.45fr_0.9fr] lg:px-16 xl:px-24">
+          <div className="grid min-h-[430px] w-full gap-12 px-8 py-18 md:grid-cols-[0.95fr_0.85fr_1.45fr_0.9fr] lg:px-16 xl:px-24">
             <div className="space-y-5">
               <BrandMark />
               <h2 className="max-w-72 text-4xl font-semibold leading-[0.95] tracking-[-0.05em] text-white">
@@ -99,7 +80,7 @@ export function Footer() {
                 <div key={group.title}>
                   <h3 className="text-xs font-black uppercase tracking-wide text-white/90">{group.title}</h3>
                   <div className="mt-3 grid gap-2">
-                    {group.links.slice(0, 3).map((link) => (
+                    {group.links.map((link) => (
                       <Link key={link} href="#" className="text-sm font-semibold text-white/65 transition hover:text-white">
                         {link}
                       </Link>
