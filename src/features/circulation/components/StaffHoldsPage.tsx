@@ -6,9 +6,10 @@ import { TableSkeleton } from "@/components/ui/TableRowSkeleton";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { hasStaffAccessFromToken } from "@/features/auth/utils/authRoles";
 import { CatalogShell, Notice, SecondaryAction } from "@/features/catalog/components/CatalogShell";
+import { useLanguage } from "@/features/i18n/context/LanguageContext";
 import { StaffHoldRecord, StaffHoldSearchParams, StaffPageResult } from "../types/circulation.type";
 import { searchStaffHolds } from "../services/circulationService";
-import { formatDate } from "./circulationHelpers";
+import { formatDate, statusLabel } from "./circulationHelpers";
 import { StaffPagination } from "./StaffLoanTable";
 
 const STAFF_PAGE_SIZE = "20";
@@ -21,7 +22,64 @@ function createHoldFilters(): StaffHoldSearchParams {
   };
 }
 
+const copy = {
+  en: {
+    loadError: "Could not load staff holds.",
+    eyebrow: "Staff holds",
+    title: "Reservation queue",
+    description: "Review reservation status across the system and jump straight into reserved pickup checkout.",
+    reservedPickup: "Reserved pickup",
+    circulationDesk: "Circulation desk",
+    accessDenied: "This workspace requires LIBRARIAN or ADMIN access.",
+    showingPrefix: "Showing",
+    showingSuffix: "holds",
+    metrics: ["Visible holds", "Ready in view", "Assigned copies"],
+    empty: "No holds found for this filter.",
+    headings: ["Member", "Book", "Status", "Queue", "Assigned copy", "Reserved", "Notified", "Expires", "Action"],
+    member: "Member",
+    openCopies: "Open physical copies",
+    copyNumber: "Copy",
+    checkout: "Checkout",
+    noDeskAction: "No desk action",
+    statuses: {
+      visible: "visible",
+      READY_FOR_PICKUP: "ready for pickup",
+      WAITING: "waiting",
+      FULFILLED: "fulfilled",
+      EXPIRED: "expired",
+    },
+  },
+  vi: {
+    loadError: "Không thể tải hàng đợi đặt giữ.",
+    eyebrow: "Đặt giữ của staff",
+    title: "Hàng đợi đặt giữ",
+    description: "Xem trạng thái đặt giữ toàn hệ thống và đi thẳng tới pickup checkout khi sách sẵn sàng.",
+    reservedPickup: "Nhận sách đặt giữ",
+    circulationDesk: "Quầy lưu thông",
+    accessDenied: "Khu vực này yêu cầu quyền LIBRARIAN hoặc ADMIN.",
+    showingPrefix: "Đang hiển thị",
+    showingSuffix: "lượt giữ",
+    metrics: ["Lượt giữ hiển thị", "Sẵn sàng trong trang", "Bản sao đã gán"],
+    empty: "Không tìm thấy lượt giữ phù hợp bộ lọc.",
+    headings: ["Thành viên", "Sách", "Trạng thái", "Hàng đợi", "Bản sao đã gán", "Ngày đặt", "Đã báo", "Hết hạn", "Thao tác"],
+    member: "Thành viên",
+    openCopies: "Mở bản sao vật lý",
+    copyNumber: "Bản sao",
+    checkout: "Checkout",
+    noDeskAction: "Không có thao tác quầy",
+    statuses: {
+      visible: "đang hiển thị",
+      READY_FOR_PICKUP: "sẵn sàng nhận",
+      WAITING: "đang chờ",
+      FULFILLED: "đã nhận",
+      EXPIRED: "đã hết hạn",
+    },
+  },
+};
+
 export function StaffHoldsPage() {
+  const { locale } = useLanguage();
+  const text = copy[locale];
   const { accessToken, hasStaffAccess, refresh } = useAuth();
   const [filters, setFilters] = useState<StaffHoldSearchParams>(() => createHoldFilters());
   const [result, setResult] = useState<StaffPageResult<StaffHoldRecord>>({ items: [], page: 0, totalPages: 1, totalElements: 0 });
@@ -53,7 +111,7 @@ export function StaffHoldsPage() {
       })
       .catch((fetchError) => {
         if (!isMounted) return;
-        setError(fetchError instanceof Error ? fetchError.message : "Could not load staff holds.");
+        setError(fetchError instanceof Error ? fetchError.message : text.loadError);
       })
       .finally(() => {
         if (isMounted) {
@@ -65,7 +123,7 @@ export function StaffHoldsPage() {
       isMounted = false;
       window.clearTimeout(loadingTimerId);
     };
-  }, [accessToken, canUseStaffApi, filters, refreshAccessToken]);
+  }, [accessToken, canUseStaffApi, filters, refreshAccessToken, text.loadError]);
 
   useEffect(() => {
     return () => {
@@ -146,36 +204,36 @@ export function StaffHoldsPage() {
     <CatalogShell
       protectedPage
       wide
-      eyebrow="Staff holds"
-      title="Reservation queue"
-      description="Review reservation status across the system and jump straight into reserved pickup checkout."
+      eyebrow={text.eyebrow}
+      title={text.title}
+      description={text.description}
       actions={
         <>
-          <SecondaryAction href="/staff/holds/pickup">Reserved pickup</SecondaryAction>
-          <SecondaryAction href="/staff/circulation">Circulation desk</SecondaryAction>
+          <SecondaryAction href="/staff/holds/pickup">{text.reservedPickup}</SecondaryAction>
+          <SecondaryAction href="/staff/circulation">{text.circulationDesk}</SecondaryAction>
         </>
       }
     >
-      {!canUseStaffApi ? <Notice tone="error" message="This workspace requires LIBRARIAN or ADMIN access." /> : null}
+      {!canUseStaffApi ? <Notice tone="error" message={text.accessDenied} /> : null}
 
       <form ref={filterFormRef} onSubmit={handleSubmit} onChange={handleFilterChange} className="rounded-2xl border border-[#EDEDF2] bg-[#F8F9FA] p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-[minmax(260px,0.5fr)_1fr]">
           <select name="status" defaultValue="READY_FOR_PICKUP" className="h-14 rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-semibold text-[#111827] outline-none transition focus:border-[#337AB7]">
-            <option value="READY_FOR_PICKUP">Ready for pickup</option>
-            <option value="WAITING">Waiting</option>
-            <option value="FULFILLED">Fulfilled</option>
-            <option value="EXPIRED">Expired</option>
+            <option value="READY_FOR_PICKUP">{statusLabel("READY_FOR_PICKUP", locale)}</option>
+            <option value="WAITING">{statusLabel("WAITING", locale)}</option>
+            <option value="FULFILLED">{statusLabel("FULFILLED", locale)}</option>
+            <option value="EXPIRED">{statusLabel("EXPIRED", locale)}</option>
           </select>
           <div className="flex items-center rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm font-semibold text-[#333333]">
-            Showing {holdStatusLabel(filters.status)} holds
+            {text.showingPrefix} {holdStatusLabel(filters.status, locale)} {text.showingSuffix}
           </div>
         </div>
       </form>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <MetricCard label="Visible holds" value={String(pageStats.visible)} />
-        <MetricCard label="Ready in view" value={String(pageStats.ready)} tone={pageStats.ready ? "success" : "normal"} />
-        <MetricCard label="Assigned copies" value={String(pageStats.assigned)} />
+        <MetricCard label={text.metrics[0]} value={String(pageStats.visible)} />
+        <MetricCard label={text.metrics[1]} value={String(pageStats.ready)} tone={pageStats.ready ? "success" : "normal"} />
+        <MetricCard label={text.metrics[2]} value={String(pageStats.assigned)} />
       </div>
 
       {error ? <div className="mt-5"><Notice tone="error" message={error} /></div> : null}
@@ -195,10 +253,13 @@ export function StaffHoldsPage() {
 }
 
 function StaffHoldTable({ holds }: { holds: StaffHoldRecord[] }) {
+  const { locale } = useLanguage();
+  const text = copy[locale];
+
   if (!holds.length) {
     return (
       <div className="rounded-xl border border-[#EDEDF2] bg-[#F8F9FA] p-5 text-sm font-semibold text-[#333333]">
-        No holds found for this filter.
+        {text.empty}
       </div>
     );
   }
@@ -208,7 +269,7 @@ function StaffHoldTable({ holds }: { holds: StaffHoldRecord[] }) {
       <table className="w-full min-w-[1180px] border-collapse bg-white text-left text-sm">
         <thead className="bg-[#000054] text-white">
           <tr>
-            {["Member", "Book", "Status", "Queue", "Assigned copy", "Reserved", "Notified", "Expires", "Action"].map((heading) => (
+            {text.headings.map((heading) => (
               <th key={heading} className="px-4 py-3 font-bold">
                 {heading}
               </th>
@@ -228,7 +289,7 @@ function StaffHoldTable({ holds }: { holds: StaffHoldRecord[] }) {
                   <div className="font-bold text-[#000054]">
                     {memberId ? (
                       <Link href={`/staff/members/${memberId}`} className="hover:text-[#337AB7]">
-                        {hold.memberName || `Member ${memberId}`}
+                        {hold.memberName || `${text.member} ${memberId}`}
                       </Link>
                     ) : (
                       hold.memberName || "-"
@@ -240,7 +301,7 @@ function StaffHoldTable({ holds }: { holds: StaffHoldRecord[] }) {
                   <div className="font-bold text-[#000054]">{hold.bookTitle ?? hold.title ?? "-"}</div>
                   {bookId ? (
                     <Link href={`/staff/books/${bookId}/copies`} className="mt-1 inline-flex text-xs font-bold text-[#337AB7] hover:text-[#E60028]">
-                      Open physical copies
+                      {text.openCopies}
                     </Link>
                   ) : null}
                 </td>
@@ -248,18 +309,18 @@ function StaffHoldTable({ holds }: { holds: StaffHoldRecord[] }) {
                 <td className="px-4 py-4 font-semibold text-[#333333]">{hold.queuePosition ?? "-"}</td>
                 <td className="px-4 py-4">
                   <p className="font-mono text-xs font-semibold text-[#333333]">{hold.assignedCopyBarcode ?? hold.assignedBarcode ?? hold.barcode ?? "-"}</p>
-                  {hold.assignedCopyId ? <p className="mt-1 text-xs font-bold text-[#337AB7]">Copy #{hold.assignedCopyId}</p> : null}
+                  {hold.assignedCopyId ? <p className="mt-1 text-xs font-bold text-[#337AB7]">{text.copyNumber} #{hold.assignedCopyId}</p> : null}
                 </td>
-                <td className="px-4 py-4 text-[#333333]">{formatDate(hold.reservedAt)}</td>
-                <td className="px-4 py-4 text-[#333333]">{formatDate(hold.notifiedAt)}</td>
-                <td className="px-4 py-4 text-[#333333]">{formatDate(hold.expiresAt)}</td>
+                <td className="px-4 py-4 text-[#333333]">{formatDate(hold.reservedAt, locale)}</td>
+                <td className="px-4 py-4 text-[#333333]">{formatDate(hold.notifiedAt, locale)}</td>
+                <td className="px-4 py-4 text-[#333333]">{formatDate(hold.expiresAt, locale)}</td>
                 <td className="px-4 py-4">
                   {holdId && status === "READY_FOR_PICKUP" ? (
                     <Link href={`/staff/holds/pickup?holdId=${holdId}`} className="inline-flex rounded-full bg-[#E60028] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-                      Checkout
+                      {text.checkout}
                     </Link>
                   ) : (
-                    <span className="text-xs font-semibold text-[#333333]/70">No desk action</span>
+                    <span className="text-xs font-semibold text-[#333333]/70">{text.noDeskAction}</span>
                   )}
                 </td>
               </tr>
@@ -272,6 +333,7 @@ function StaffHoldTable({ holds }: { holds: StaffHoldRecord[] }) {
 }
 
 function HoldStatusBadge({ status }: { status?: string }) {
+  const { locale } = useLanguage();
   const normalizedStatus = normalizeStatus(status) || "UNKNOWN";
   const classes =
     normalizedStatus === "READY_FOR_PICKUP"
@@ -284,7 +346,7 @@ function HoldStatusBadge({ status }: { status?: string }) {
 
   return (
     <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${classes}`}>
-      {normalizedStatus}
+      {statusLabel(normalizedStatus, locale)}
     </span>
   );
 }
@@ -307,16 +369,11 @@ function isCancelledHold(hold: StaffHoldRecord) {
   return status === "CANCELLED" || status === "CANCELED" || status === "CANCELLED_BY_MEMBER";
 }
 
-function holdStatusLabel(status?: string) {
+function holdStatusLabel(status: string | undefined, locale: "en" | "vi") {
   const normalizedStatus = normalizeStatus(status);
-  const labels: Record<string, string> = {
-    READY_FOR_PICKUP: "ready for pickup",
-    WAITING: "waiting",
-    FULFILLED: "fulfilled",
-    EXPIRED: "expired",
-  };
+  const labels = copy[locale].statuses;
 
-  return labels[normalizedStatus] ?? "visible";
+  return labels[normalizedStatus as keyof typeof labels] ?? labels.visible;
 }
 
 function idOf(value?: number | null) {

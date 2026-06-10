@@ -217,7 +217,9 @@ function ResultCard({ children, title }: { children: React.ReactNode; title: str
 }
 
 function CheckoutPreviewPanel({ fallbackBarcode, preview }: { fallbackBarcode?: string; preview: CheckoutPreviewResponse }) {
-  const reasons = [...(preview.reasons ?? []), ...(preview.warnings ?? [])];
+  const reasons = [...(preview.reasons ?? []), ...(preview.warnings ?? [])]
+    .map(formatPreviewNote)
+    .filter(Boolean);
   const allowed = preview.allowed ?? false;
 
   return (
@@ -266,12 +268,65 @@ function CheckoutPreviewPanel({ fallbackBarcode, preview }: { fallbackBarcode?: 
         <section className="rounded-xl border border-amber-200 bg-amber-50 p-4">
           <h3 className="text-xs font-bold uppercase tracking-wide text-amber-800">Notes</h3>
           <ul className="mt-2 grid gap-2 text-sm font-semibold text-amber-900">
-            {reasons.map((item) => <li key={item}>{item}</li>)}
+            {reasons.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
           </ul>
         </section>
       ) : null}
     </div>
   );
+}
+
+function formatPreviewNote(note: unknown) {
+  if (typeof note === "string") return toFriendlyPreviewNote("", note);
+  if (note === null || note === undefined) return "";
+
+  if (typeof note === "object") {
+    const source = note as { code?: unknown; message?: unknown };
+    const code = typeof source.code === "string" ? source.code : "";
+    const message = typeof source.message === "string" ? source.message : "";
+
+    const friendlyMessage = toFriendlyPreviewNote(code, message);
+
+    if (friendlyMessage) return friendlyMessage;
+    if (code && message) return `${code}: ${message}`;
+    if (message) return message;
+    if (code) return code;
+
+    try {
+      return JSON.stringify(note);
+    } catch {
+      return "";
+    }
+  }
+
+  return String(note);
+}
+
+function toFriendlyPreviewNote(code: string, message: string) {
+  const normalized = `${code} ${message}`.toLowerCase();
+
+  if (
+    normalized.includes("borrow_limit") ||
+    normalized.includes("borrow limit") ||
+    normalized.includes("max borrow") ||
+    normalized.includes("maximum borrow") ||
+    normalized.includes("active loan limit") ||
+    normalized.includes("too many") ||
+    normalized.includes("quota")
+  ) {
+    const limit = extractFirstNumber(message) ?? "5";
+    return `This member has reached the ${limit}-book borrowing limit. Please process a return before checking out another item.`;
+  }
+
+  if (normalized.includes("overdue")) {
+    return "This member has overdue loans. Please resolve the overdue items before checking out another book.";
+  }
+
+  return "";
+}
+
+function extractFirstNumber(value: string) {
+  return value.match(/\d+/)?.[0];
 }
 
 function Metric({ className = "", label, value }: { className?: string; label: string; value: string }) {

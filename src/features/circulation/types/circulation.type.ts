@@ -72,9 +72,16 @@ export type CheckoutPreviewResponse = {
   dueAt?: string;
   dueDate?: string;
   maxRenewals?: number;
-  warnings?: string[];
-  reasons?: string[];
+  warnings?: PreviewNote[];
+  reasons?: PreviewNote[];
 };
+
+export type PreviewNote =
+  | string
+  | {
+      code?: string;
+      message?: string;
+    };
 
 export type CheckoutResponse = BorrowRecord & {
   memberName?: string;
