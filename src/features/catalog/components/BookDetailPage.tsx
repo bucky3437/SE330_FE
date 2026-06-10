@@ -27,7 +27,6 @@ export function BookDetailPage() {
 
   useEffect(() => {
     let isMounted = true;
-
     getBook(params.bookId)
       .then((data) => {
         if (!isMounted) return;
@@ -39,24 +38,17 @@ export function BookDetailPage() {
         setError(fetchError instanceof Error ? fetchError.message : "Could not load book details.");
       })
       .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       });
-
-    return () => {
-      isMounted = false;
-    };
+    return () => { isMounted = false; };
   }, [params.bookId]);
 
   async function handlePlaceHold() {
     if (isPlacingHold) return;
-
     if (!isAuthenticated) {
       setError("Please log in before placing a hold.");
       return;
     }
-
     try {
       setIsPlacingHold(true);
       await createHold(params.bookId, accessToken, refreshAccessToken);
@@ -74,7 +66,18 @@ export function BookDetailPage() {
       eyebrow="Book detail"
       title={book?.title ?? "Library record"}
       description="Inspect metadata and availability for this title."
-      actions={<AnimatedActionLink href="/books">Back to books</AnimatedActionLink>}
+      actions={
+        <div className="flex items-center gap-3 flex-wrap">
+          {book?.ebookUrl && (
+            <EbookBorrowButton
+              bookId={book.id ?? book.bookId ?? 0}
+              bookTitle={book.title}
+              hasEbook={!!book.ebookUrl}
+            />
+          )}
+          <AnimatedActionLink href="/books">Back to books</AnimatedActionLink>
+        </div>
+      }
     >
       {message && (
         <div className="mb-5">
@@ -91,28 +94,45 @@ export function BookDetailPage() {
         <BookDetailSkeleton />
       ) : book ? (
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          {/* Book info */}
           <section className="rounded-xl border border-[#EDEDF2] bg-[#F8F9FA] p-6">
             <span className="rounded-full bg-[#000054]/8 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#000054]">
               {categoryLabel(book.category)}
             </span>
             <h2 className="mt-5 font-serif text-3xl font-bold text-[#000054]">{book.title}</h2>
-            <p className="mt-3 text-[#333333]">by {(book.authors ?? []).map(authorLabel).join(", ") || "Unknown author"}</p>
+            <p className="mt-3 text-[#333333]">
+              by {(book.authors ?? []).map(authorLabel).join(", ") || "Unknown author"}
+            </p>
             <div className="mt-6 inline-flex rounded-full bg-white px-4 py-2 text-sm font-bold text-[#E60028] ring-1 ring-[#EDEDF2]">
               ISBN {book.isbn}
             </div>
           </section>
 
+          {/* Availability */}
           <section className="rounded-xl border border-[#EDEDF2] bg-white p-6">
             <h3 className="text-lg font-bold text-[#000054]">Availability</h3>
-            <span className={`mt-4 inline-flex rounded-full px-4 py-2 text-sm font-bold ring-1 ${availabilityTone(book)}`}>
-              {availabilityLabel(book)} copies available
-            </span>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className={`inline-flex rounded-full px-4 py-2 text-sm font-bold ring-1 ${availabilityTone(book)}`}>
+                {availabilityLabel(book)} copies available
+              </span>
+              {book.ebookUrl && (
+                <span className="inline-flex rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 ring-1 ring-blue-200">
+                  Ebook available
+                </span>
+              )}
+            </div>
+
             {hasAvailableCopies ? (
               <div className="mt-5 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 text-sm leading-6 text-emerald-900 shadow-sm">
                 <p className="font-bold">Copies are available on the shelf.</p>
                 <p className="mt-1 text-emerald-800">
                   Please visit the circulation desk to borrow this title. Holds are opened only when all copies are checked out.
                 </p>
+                {book.ebookUrl && (
+                  <p className="mt-3 text-emerald-700 border-t border-emerald-200 pt-3">
+                    This book is also available as an ebook.
+                  </p>
+                )}
               </div>
             ) : canPlaceHold ? (
               <div className="mt-5 rounded-2xl border border-[#D9DCE8] bg-[#F8F9FA] p-5">
@@ -120,6 +140,11 @@ export function BookDetailPage() {
                 <p className="mt-1 text-sm leading-6 text-[#333333]">
                   Place a hold and we will reserve the next available copy for you.
                 </p>
+                {book.ebookUrl && (
+                  <p className="mt-3 text-sm text-[#337AB7]">
+                    No copies available? You can borrow the ebook version online right now using the <strong>Borrow ebook</strong> button above.
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={handlePlaceHold}
@@ -135,9 +160,7 @@ export function BookDetailPage() {
                   ) : (
                     <span className="relative inline-flex items-center gap-2">
                       Place Hold
-                      <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
-                        →
-                      </span>
+                      <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                     </span>
                   )}
                 </button>
@@ -146,9 +169,7 @@ export function BookDetailPage() {
                   className="group mt-3 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#D9DCE8] bg-white px-5 py-3 text-sm font-bold text-[#000054] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[#337AB7] hover:text-[#E60028] hover:shadow-lg hover:shadow-[#000054]/10 active:translate-y-0 active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-[#337AB7]/20"
                 >
                   My Holds
-                  <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">
-                    →
-                  </span>
+                  <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
                 </Link>
               </div>
             ) : (
@@ -158,6 +179,7 @@ export function BookDetailPage() {
             )}
           </section>
 
+          {/* Bibliographic details */}
           <section className="rounded-xl border border-[#EDEDF2] bg-white p-6 lg:col-span-2">
             <h3 className="text-lg font-bold text-[#000054]">Bibliographic details</h3>
             <dl className="mt-5 grid gap-4 md:grid-cols-2">
@@ -188,9 +210,7 @@ function AnimatedActionLink({ href, children }: { href: string; children: string
       href={href}
       className="group inline-flex items-center justify-center gap-2 rounded-full border border-[#D9DCE8] px-5 py-3 text-sm font-bold text-[#000054] outline-none transition-all duration-200 hover:-translate-y-0.5 hover:border-[#337AB7] hover:bg-white hover:text-[#E60028] hover:shadow-lg hover:shadow-[#000054]/10 active:translate-y-0 active:scale-[0.98] focus-visible:ring-4 focus-visible:ring-[#337AB7]/20"
     >
-      <span aria-hidden="true" className="transition-transform duration-200 group-hover:-translate-x-1">
-        ←
-      </span>
+      <span aria-hidden="true" className="transition-transform duration-200 group-hover:-translate-x-1">←</span>
       {children}
     </Link>
   );
@@ -205,14 +225,12 @@ function BookDetailSkeleton() {
         <Skeleton variant="text" className="mt-3 h-5 w-1/2" />
         <Skeleton variant="rectangular" className="mt-6 h-8 w-40 rounded-full" />
       </section>
-
       <section className="rounded-xl border border-[#EDEDF2] bg-white p-6">
         <Skeleton variant="text" className="h-6 w-32" />
         <Skeleton variant="rectangular" className="mt-4 h-8 w-40 rounded-full" />
         <Skeleton variant="rectangular" className="mt-5 h-12 w-full rounded-full" />
         <Skeleton variant="rectangular" className="mt-3 h-12 w-full rounded-full" />
       </section>
-
       <section className="rounded-xl border border-[#EDEDF2] bg-white p-6 lg:col-span-2">
         <Skeleton variant="text" className="h-6 w-48" />
         <div className="mt-5 grid gap-4 md:grid-cols-2">
