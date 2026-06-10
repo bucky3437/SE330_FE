@@ -23,6 +23,7 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
 
   async function handleBorrow() {
     if (!isAuthenticated) {
+      window.location.href = "/login";
       setShowLoginModal(true);
       return;
     }
@@ -87,10 +88,9 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
                 Cancel
               </button>
             </div>
-          </div>
+          </div>Expand commentComment on lines R65 to R90
         </>
       )}
-
       {error && (
         <p className="mb-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs text-red-700">{error}</p>
       )}
