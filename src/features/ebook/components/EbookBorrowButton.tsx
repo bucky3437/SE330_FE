@@ -9,9 +9,14 @@ import { EbookLoan } from "../types/ebook.type";
 type Props = {
   bookId: number;
   bookTitle?: string;
+  /** Truyền vào nếu book detail page đã biết book có ebook hay chưa */
   hasEbook?: boolean;
 };
 
+/**
+ * Nút "Mượn ebook" nhúng vào BookDetailPage.
+ * Sau khi mượn thành công, hiển thị link đọc luôn.
+ */
 export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
   const { accessToken, refresh, isAuthenticated } = useAuth();
   const [loan, setLoan] = useState<EbookLoan | null>(null);
@@ -23,7 +28,6 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
 
   async function handleBorrow() {
     if (!isAuthenticated) {
-      window.location.href = "/login";
       setShowLoginModal(true);
       return;
     }
@@ -88,7 +92,7 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
                 Cancel
               </button>
             </div>
-          </div>Expand commentComment on lines R65 to R90
+          </div>
         </>
       )}
       {error && (
@@ -106,7 +110,7 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
           </>
         ) : (
           <>
-            Borrow ebook
+            Read online
             <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
           </>
         )}
