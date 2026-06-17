@@ -13,22 +13,38 @@ type StaffLoanTableProps = {
 const copy = {
   en: {
     empty: "No loan records found.",
-    headings: ["Member", "Book", "Barcode", "Borrowed", "Due", "Returned", "Status", "Renewals", "Fine"],
+    headings: ["ID", "Type", "Member", "Book", "Item", "Borrowed", "Due / Expires", "Returned", "Status", "Renewals", "Fine"],
     member: "Member",
     openCopies: "Open physical copies",
+    viewBook: "View book",
+    payment: "Payment",
     daysOverdue: "days overdue",
     copy: "Copy",
+    physical: "Physical",
+    ebook: "Ebook",
+    digitalAccess: "Digital access",
+    dueDate: "Due date",
+    expires: "Expires",
+    notApplicable: "N/A",
     pagination: "Pagination",
     previous: "Previous",
     next: "Next",
   },
   vi: {
     empty: "Không tìm thấy lượt mượn.",
-    headings: ["Người mượn", "Sách", "Mã bản sao", "Ngày mượn", "Hạn trả", "Ngày trả", "Trạng thái", "Gia hạn", "Phạt"],
+    headings: ["Mã", "Loại", "Người mượn", "Sách", "Định danh", "Ngày mượn", "Hạn / Hết hạn", "Ngày trả", "Trạng thái", "Gia hạn", "Phạt"],
     member: "Thành viên",
     openCopies: "Mở bản sao vật lý",
+    viewBook: "Xem sách",
+    payment: "Thanh toán",
     daysOverdue: "ngày quá hạn",
     copy: "Bản sao",
+    physical: "Physical",
+    ebook: "Ebook",
+    digitalAccess: "Quyền đọc số",
+    dueDate: "Hạn trả",
+    expires: "Hết hạn",
+    notApplicable: "Không áp dụng",
     pagination: "Phân trang",
     previous: "Trước",
     next: "Sau",
@@ -48,7 +64,7 @@ export function StaffLoanTable({ loans, emptyMessage }: StaffLoanTableProps) {
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#EDEDF2]">
-      <table className="w-full min-w-[1120px] border-collapse bg-white text-left text-sm">
+      <table className="w-full min-w-[1360px] border-collapse bg-white text-left text-sm">
         <thead className="bg-[#000054] text-white">
           <tr>
             {text.headings.map((heading) => (
@@ -62,9 +78,15 @@ export function StaffLoanTable({ loans, emptyMessage }: StaffLoanTableProps) {
           {loans.map((loan) => {
             const memberId = idOf(loan.memberId);
             const bookId = idOf(loan.bookId);
+            const isEbook = loan.loanType === "EBOOK";
+            const dueValue = isEbook ? loan.expiredAt ?? loan.dueDate ?? loan.dueAt : loan.dueDate ?? loan.dueAt;
 
             return (
               <tr key={loanKey(loan)} className="border-t border-[#EDEDF2] align-top transition hover:bg-[#F8F9FA]">
+                <td className="px-4 py-4 font-mono text-xs font-black text-[#000054]">{renderLoanIdentifier(loan)}</td>
+                <td className="px-4 py-4">
+                  <LoanTypeBadge loanType={loan.loanType} />
+                </td>
                 <td className="px-4 py-4">
                   <div className="font-bold text-[#000054]">
                     {memberId ? (
@@ -79,27 +101,40 @@ export function StaffLoanTable({ loans, emptyMessage }: StaffLoanTableProps) {
                 </td>
                 <td className="px-4 py-4">
                   <div className="font-bold text-[#000054]">{loan.bookTitle ?? loan.title ?? "-"}</div>
-                  {bookId ? (
+                  {bookId && isEbook ? (
+                    <Link href={`/books/${bookId}`} className="mt-1 inline-flex text-xs font-bold text-[#337AB7] hover:text-[#E60028]">
+                      {text.viewBook}
+                    </Link>
+                  ) : null}
+                  {bookId && !isEbook ? (
                     <Link href={`/staff/books/${bookId}/copies`} className="mt-1 inline-flex text-xs font-bold text-[#337AB7] hover:text-[#E60028]">
                       {text.openCopies}
                     </Link>
                   ) : null}
+                  {isEbook && loan.paymentId ? (
+                    <span className="ml-3 mt-1 inline-flex text-xs font-bold text-[#333333]/70">
+                      {text.payment} #{loan.paymentId}
+                    </span>
+                  ) : null}
                 </td>
-                <td className="px-4 py-4 font-mono text-xs font-semibold text-[#333333]">{loan.itemBarcode ?? loan.barcode ?? "-"}</td>
+                <td className="px-4 py-4 font-mono text-xs font-semibold text-[#333333]">{renderItemCode(loan, text)}</td>
                 <td className="px-4 py-4 text-[#333333]">{formatDate(loan.borrowedAt ?? loan.checkoutAt, locale)}</td>
                 <td className="px-4 py-4">
+                  <p className="mb-1 text-[11px] font-black uppercase tracking-wide text-[#6B7280]">
+                    {isEbook ? text.expires : text.dueDate}
+                  </p>
                   <span className={loan.overdue ? "font-bold text-[#E60028]" : "text-[#333333]"}>
-                    {formatDate(loan.dueDate ?? loan.dueAt, locale)}
+                    {formatDate(dueValue, locale)}
                   </span>
                   {loan.daysOverdue ? <p className="mt-1 text-xs font-bold text-[#E60028]">{loan.daysOverdue} {text.daysOverdue}</p> : null}
                 </td>
                 <td className="px-4 py-4 text-[#333333]">{formatDate(loan.returnedAt, locale)}</td>
                 <td className="px-4 py-4">
                   <StatusBadge status={loan.status} overdue={loan.overdue} />
-                  {loan.copyStatus ? <p className="mt-2 text-xs font-semibold text-[#333333]/75">{text.copy}: {statusLabel(loan.copyStatus, locale)}</p> : null}
+                  {!isEbook && loan.copyStatus ? <p className="mt-2 text-xs font-semibold text-[#333333]/75">{text.copy}: {statusLabel(loan.copyStatus, locale)}</p> : null}
                 </td>
                 <td className="px-4 py-4 font-semibold text-[#333333]">
-                  {loan.renewCount ?? 0} / {loan.maxRenewals ?? "-"}
+                  {isEbook ? text.notApplicable : `${loan.renewCount ?? 0} / ${loan.maxRenewals ?? "-"}`}
                 </td>
                 <td className="px-4 py-4">
                   <span className="font-semibold text-[#333333]">{money(loan.fineAmount ?? loan.fine, locale)}</span>
@@ -169,15 +204,19 @@ export function StaffPagination({
 
 export function StatusBadge({ status, overdue }: { status?: string; overdue?: boolean }) {
   const { locale } = useLanguage();
-  const normalizedStatus = status || "UNKNOWN";
+  const normalizedStatus = (status || "UNKNOWN").toUpperCase();
   const classes =
     overdue || normalizedStatus === "OVERDUE"
       ? "border-rose-200 bg-rose-50 text-rose-700"
       : normalizedStatus === "BORROWED"
         ? "border-blue-200 bg-blue-50 text-blue-700"
-        : normalizedStatus === "RETURNED"
+        : normalizedStatus === "ACTIVE"
+          ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+          : normalizedStatus === "RETURNED"
           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : "border-[#D9DCE8] bg-[#F8F9FA] text-[#333333]";
+          : normalizedStatus === "LOST" || normalizedStatus === "REVOKED" || normalizedStatus === "EXPIRED"
+            ? "border-amber-200 bg-amber-50 text-amber-800"
+            : "border-[#D9DCE8] bg-[#F8F9FA] text-[#333333]";
 
   return (
     <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${classes}`}>
@@ -187,11 +226,43 @@ export function StatusBadge({ status, overdue }: { status?: string; overdue?: bo
 }
 
 export function loanKey(loan: StaffLoanRecord) {
-  return String(loan.borrowId ?? loan.id ?? `${loan.memberId ?? "member"}-${loan.bookCopyId ?? loan.itemBarcode ?? "copy"}`);
+  return String(
+    loan.loanType === "EBOOK" && loan.ebookLoanId
+      ? `ebook-${loan.ebookLoanId}`
+      : loan.borrowId ?? loan.id ?? `${loan.memberId ?? "member"}-${loan.bookCopyId ?? loan.itemBarcode ?? loan.ebookLoanId ?? "copy"}`,
+  );
 }
 
 function idOf(value?: number) {
   return value === undefined || value === null ? "" : String(value);
+}
+
+function renderLoanIdentifier(loan: StaffLoanRecord) {
+  if (loan.loanType === "EBOOK") {
+    return loan.ebookLoanId ? `EBOOK-${loan.ebookLoanId}` : "EBOOK";
+  }
+
+  return loan.borrowId || loan.id ? `#${loan.borrowId ?? loan.id}` : "-";
+}
+
+function renderItemCode(loan: StaffLoanRecord, text: typeof copy.en) {
+  return loan.loanType === "EBOOK" ? text.digitalAccess : loan.itemBarcode ?? loan.barcode ?? "-";
+}
+
+function LoanTypeBadge({ loanType }: { loanType?: string }) {
+  const { locale } = useLanguage();
+  const text = copy[locale];
+  const isEbook = loanType === "EBOOK";
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide ${
+        isEbook ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-slate-50 text-slate-700"
+      }`}
+    >
+      {isEbook ? text.ebook : text.physical}
+    </span>
+  );
 }
 
 function buildPaginationPages(currentPage: number, totalPages: number) {

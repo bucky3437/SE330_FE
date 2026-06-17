@@ -19,9 +19,10 @@ type CatalogShellProps = {
   frameless?: boolean;
   catalogPanel?: boolean;
   compactPanelHeader?: boolean;
+  hideHeader?: boolean;
 };
 
-export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false, frameless = false, catalogPanel = false, compactPanelHeader = false }: CatalogShellProps) {
+export function CatalogShell({ eyebrow, title, description, children, actions, protectedPage = false, wide = false, frameless = false, catalogPanel = false, compactPanelHeader = false, hideHeader = false }: CatalogShellProps) {
   const framedSectionClass = catalogPanel
     ? "relative overflow-hidden rounded-[32px] border border-black/10 bg-white/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.08)] md:p-10 lg:p-12"
     : "rounded-2xl border border-[#EDEDF2] bg-white p-6 shadow-[0_24px_60px_rgba(7,7,88,0.08)] md:p-8";
@@ -40,17 +41,19 @@ export function CatalogShell({ eyebrow, title, description, children, actions, p
         <main id="main-content" tabIndex={-1} className={`mx-auto min-h-[calc(100dvh-4.5rem)] w-full px-5 pt-6 pb-12 outline-none lg:px-8 ${wide ? "max-w-[calc(100vw-2rem)] 2xl:max-w-[1720px]" : "max-w-7xl"}`}>
           {frameless ? (
             <>
-              <section className="px-1 py-5 md:px-2">
-                <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                  <div>
-                    <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{eyebrow}</p>
-                    <h1 className="mt-3 text-4xl font-black tracking-tight text-[#111827] md:text-5xl">{title}</h1>
-                    <p className="mt-3 max-w-3xl leading-7 text-[#333333]">{description}</p>
+              {hideHeader ? null : (
+                <section className="px-1 py-5 md:px-2">
+                  <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+                    <div>
+                      <p className="text-sm font-bold uppercase tracking-wide text-[#337AB7]">{eyebrow}</p>
+                      <h1 className="mt-3 text-4xl font-black tracking-tight text-[#111827] md:text-5xl">{title}</h1>
+                      <p className="mt-3 max-w-3xl leading-7 text-[#333333]">{description}</p>
+                    </div>
+                    {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
                   </div>
-                  {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
-                </div>
-              </section>
-              <div className="mt-4">{children}</div>
+                </section>
+              )}
+              <div className={hideHeader ? "" : "mt-4"}>{children}</div>
             </>
           ) : (
             <section className={framedSectionClass}>

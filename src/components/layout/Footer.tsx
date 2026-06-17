@@ -21,7 +21,7 @@ const footerCopy = {
     follow: "Follow us",
     groups: [
       { title: "Explore", links: ["Books", "Categories", "Authors", "Borrowing Guide"] },
-      { title: "Account", links: ["Login", "Register", "My Loans", "Reservations"] },
+      { title: "Account", links: ["Login", "Register", "My Borrows", "Reservations"] },
       { title: "System", links: ["About", "Notices", "Contact", "Help Desk"] },
     ],
   },

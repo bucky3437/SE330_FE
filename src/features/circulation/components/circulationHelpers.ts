@@ -7,7 +7,7 @@ export function formatDate(value?: string | null, locale: "en" | "vi" = "en") {
 
 export function money(value?: number | null, locale: "en" | "vi" = "en") {
   return typeof value === "number"
-    ? value.toLocaleString(locale === "vi" ? "vi-VN" : "en-US", { style: "currency", currency: "USD" })
+    ? `${value.toLocaleString("vi-VN")} VND`
     : "-";
 }
 
@@ -28,6 +28,9 @@ export function statusLabel(status?: string | null, locale: "en" | "vi" = "en") 
       BORROWED: "Borrowed",
       OVERDUE: "Overdue",
       RETURNED: "Returned",
+      LOST: "Lost",
+      ACTIVE: "Active",
+      REVOKED: "Revoked",
       WAITING: "Waiting",
       NOTIFIED: "Notified",
       READY_FOR_PICKUP: "Ready for pickup",
@@ -43,6 +46,9 @@ export function statusLabel(status?: string | null, locale: "en" | "vi" = "en") 
       BORROWED: "Đang mượn",
       OVERDUE: "Quá hạn",
       RETURNED: "Đã trả",
+      LOST: "Đã mất",
+      ACTIVE: "Đang hiệu lực",
+      REVOKED: "Đã thu hồi",
       WAITING: "Đang chờ",
       NOTIFIED: "Đã thông báo",
       READY_FOR_PICKUP: "Sẵn sàng nhận",

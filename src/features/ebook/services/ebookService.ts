@@ -2,7 +2,15 @@
 
 import { ApiError, ApiResponse } from "@/types/api.type";
 import { API_URL } from "@/features/auth/services/authService";
-import { BorrowEbookRequest, EbookLoan, EbookPageParams } from "../types/ebook.type";
+import {
+  BorrowEbookRequest,
+  EbookLoan,
+  EbookPageParams,
+  EbookReadingSessionCloseResponse,
+  EbookReadingSessionRefreshResponse,
+  EbookReadingSessionResponse,
+  EbookSignedContentResponse,
+} from "../types/ebook.type";
 
 const REQUEST_TIMEOUT_MS = 30000;
 type AccessTokenRefresher = () => Promise<string | null>;
@@ -127,9 +135,10 @@ export function borrowEbook(
   accessToken: string | null,
   refreshAccessToken?: AccessTokenRefresher,
 ): Promise<EbookLoan> {
-  const body: BorrowEbookRequest = { bookId };
+  const body: BorrowEbookRequest = {};
+
   return ebookFetchWithRetry<EbookLoan>(
-    "/api/user/ebook-loans",
+    `/api/ebooks/${bookId}/loans`,
     { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
     accessToken,
     refreshAccessToken,
@@ -143,7 +152,7 @@ export function returnEbook(
   refreshAccessToken?: AccessTokenRefresher,
 ): Promise<EbookLoan> {
   return ebookFetchWithRetry<EbookLoan>(
-    `/api/user/ebook-loans/${loanId}/return`,
+    `/api/ebook-loans/${loanId}/return`,
     { method: "POST" },
     accessToken,
     refreshAccessToken,
@@ -157,7 +166,7 @@ export function renewEbook(
   refreshAccessToken?: AccessTokenRefresher,
 ): Promise<EbookLoan> {
   return ebookFetchWithRetry<EbookLoan>(
-    `/api/user/ebook-loans/${loanId}/renew`,
+    `/api/ebook-loans/${loanId}/renew`,
     { method: "POST" },
     accessToken,
     refreshAccessToken,
@@ -171,7 +180,7 @@ export async function getMyEbookLoans(
   refreshAccessToken?: AccessTokenRefresher,
 ): Promise<EbookPageResult> {
   const { history = false, page = 0, size = 10 } = params;
-  const path = `/api/user/ebook-loans?history=${history}&page=${page}&size=${size}`;
+  const path = `/api/ebook-loans/my?history=${history}&page=${page}&size=${size}`;
   try {
     return await ebookFetchPage(path, accessToken);
   } catch (error) {
@@ -181,4 +190,74 @@ export async function getMyEbookLoans(
     }
     throw error;
   }
+}
+
+export function createReadingSession(
+  bookId: number,
+  accessToken: string | null,
+  refreshAccessToken?: AccessTokenRefresher,
+): Promise<EbookReadingSessionResponse> {
+  return ebookFetchWithRetry<EbookReadingSessionResponse>(
+    `/api/ebooks/${bookId}/reading-sessions`,
+    { method: "POST" },
+    accessToken,
+    refreshAccessToken,
+  );
+}
+
+export function getSignedContent(
+  bookId: number,
+  sessionToken: string,
+  accessToken: string | null,
+  refreshAccessToken?: AccessTokenRefresher,
+): Promise<EbookSignedContentResponse> {
+  return ebookFetchWithRetry<EbookSignedContentResponse>(
+    `/api/ebooks/${bookId}/reader/content`,
+    {
+      method: "GET",
+      headers: {
+        "X-Reading-Session": sessionToken,
+      },
+    },
+    accessToken,
+    refreshAccessToken,
+  );
+}
+
+export function refreshReadingSession(
+  sessionId: number,
+  sessionToken: string,
+  accessToken: string | null,
+  refreshAccessToken?: AccessTokenRefresher,
+): Promise<EbookReadingSessionRefreshResponse> {
+  return ebookFetchWithRetry<EbookReadingSessionRefreshResponse>(
+    `/api/ebooks/reading-sessions/${sessionId}/refresh`,
+    {
+      method: "POST",
+      headers: {
+        "X-Reading-Session": sessionToken,
+      },
+    },
+    accessToken,
+    refreshAccessToken,
+  );
+}
+
+export function closeReadingSession(
+  sessionId: number,
+  sessionToken: string,
+  accessToken: string | null,
+  refreshAccessToken?: AccessTokenRefresher,
+): Promise<EbookReadingSessionCloseResponse> {
+  return ebookFetchWithRetry<EbookReadingSessionCloseResponse>(
+    `/api/ebooks/reading-sessions/${sessionId}/close`,
+    {
+      method: "POST",
+      headers: {
+        "X-Reading-Session": sessionToken,
+      },
+    },
+    accessToken,
+    refreshAccessToken,
+  );
 }

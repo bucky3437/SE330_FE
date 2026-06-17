@@ -69,7 +69,11 @@ export function UserEbookLoansPage() {
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
+    const loadingTimerId = window.setTimeout(() => {
+      if (active) {
+        setIsLoading(true);
+      }
+    }, 0);
 
     getMyEbookLoans({ history: showHistory }, accessToken, refreshToken)
       .then((result) => {
@@ -85,7 +89,10 @@ export function UserEbookLoansPage() {
         if (active) setIsLoading(false);
       });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+      window.clearTimeout(loadingTimerId);
+    };
   }, [accessToken, refreshToken, showHistory, message]);
 
   async function handleReturn(loan: EbookLoan) {
@@ -188,6 +195,7 @@ export function UserEbookLoansPage() {
                   const id = loanId(loan);
                   const isActioning = actioningId === id;
                   const isActive = loan.status === "ACTIVE";
+                  const expiryDate = loan.expiredAt || loan.expiresAt;
 
                   return (
                     <tr key={id} className="border-t border-[#EDEDF2] hover:bg-[#F8F9FA] transition-colors">
@@ -195,16 +203,14 @@ export function UserEbookLoansPage() {
                         <div className="truncate" title={loan.bookTitle}>
                           {loan.bookTitle ?? "–"}
                         </div>
-                        {isActive && loan.ebookReadUrl && (
-                          <a
-                            href={loan.ebookReadUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        {isActive && loan.bookId ? (
+                          <Link
+                            href={`/books/${loan.bookId}/read`}
                             className="mt-1 inline-flex items-center gap-1 text-xs text-[#337AB7] hover:underline"
                           >
                             Read now
-                          </a>
-                        )}
+                          </Link>
+                        ) : null}
                       </td>
 
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs">
@@ -218,13 +224,13 @@ export function UserEbookLoansPage() {
                       <td className="px-4 py-3 whitespace-nowrap text-gray-600">
                         {loan.returnedAt
                           ? `Returned ${formatDate(loan.returnedAt)}`
-                          : formatDate(loan.expiresAt)}
+                          : formatDate(expiryDate)}
                       </td>
 
                       <td className={`px-4 py-3 whitespace-nowrap text-xs font-semibold ${
                         isActive ? "text-green-700" : "text-gray-400"
                       }`}>
-                        {isActive ? daysLeft(loan.expiresAt) : "–"}
+                        {isActive ? daysLeft(expiryDate) : "–"}
                       </td>
 
                       <td className="px-4 py-3">{statusBadge(loan.status)}</td>
@@ -236,6 +242,14 @@ export function UserEbookLoansPage() {
                       <td className="px-4 py-3">
                         {isActive ? (
                           <div className="flex gap-2 flex-wrap">
+                            {loan.bookId ? (
+                              <Link
+                                href={`/books/${loan.bookId}/read`}
+                                className="rounded-lg bg-[#000054] px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-[#E60028]"
+                              >
+                                Read
+                              </Link>
+                            ) : null}
                             {loan.canRenew && (
                               <button
                                 disabled={isActioning}

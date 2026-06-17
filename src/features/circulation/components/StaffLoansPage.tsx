@@ -85,7 +85,7 @@ export function StaffLoansPage() {
     return {
       visible: loans.length,
       overdue: loans.filter((loan) => loan.overdue || loan.status === "OVERDUE").length,
-      open: loans.filter((loan) => ["BORROWED", "OVERDUE", "LOST"].includes(loan.status ?? "")).length,
+      open: loans.filter((loan) => ["BORROWED", "OVERDUE", "LOST", "ACTIVE"].includes((loan.status ?? "").toUpperCase())).length,
     };
   }, [loans]);
 
@@ -153,7 +153,7 @@ export function StaffLoansPage() {
       wide
       eyebrow="Staff loans"
       title="Loan activity monitor"
-      description="Search every borrow record by member, title, ISBN, or barcode, then focus on open, overdue, or historical loans."
+      description="Search physical loans and ebook access by member, title, ISBN, or barcode, then focus on open, overdue, or historical records."
       actions={
         <>
           <SecondaryAction href="/staff/members">Borrowers</SecondaryAction>
@@ -185,6 +185,9 @@ export function StaffLoansPage() {
             <option value="OVERDUE">Overdue</option>
             <option value="RETURNED">Returned</option>
             <option value="LOST">Lost</option>
+            <option value="ACTIVE">Active ebook</option>
+            <option value="EXPIRED">Expired ebook</option>
+            <option value="REVOKED">Revoked ebook</option>
           </select>
           <input name="dueFrom" type="date" aria-label="Due from" className="h-14 rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-[#337AB7]" />
           <input name="dueTo" type="date" aria-label="Due to" className="h-14 rounded-xl border border-[#D9DCE8] bg-white px-4 text-sm outline-none transition focus:border-[#337AB7]" />
@@ -193,7 +196,7 @@ export function StaffLoansPage() {
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         <MetricCard label="Visible loans" value={String(pageStats.visible)} />
-        <MetricCard label="Open in view" value={String(pageStats.open)} />
+        <MetricCard label="Open loans/access" value={String(pageStats.open)} />
         <MetricCard label="Overdue in view" value={String(pageStats.overdue)} tone={pageStats.overdue ? "danger" : "normal"} />
       </div>
 
@@ -201,7 +204,7 @@ export function StaffLoansPage() {
 
       {isLoading ? (
         <div className="mt-6">
-          <TableSkeleton rows={8} columns={9} />
+          <TableSkeleton rows={8} columns={11} />
         </div>
       ) : (
         <div className="mt-6">

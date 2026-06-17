@@ -1,19 +1,34 @@
 export type BorrowRecord = {
   borrowId?: number;
   id?: number;
+  memberId?: number;
+  memberName?: string;
+  memberEmail?: string;
+  bookId?: number;
   bookTitle?: string;
   title?: string;
+  bookCopyId?: number;
+  itemBarcode?: string;
   barcode?: string;
+  copyStatus?: string;
   borrowedAt?: string;
   checkoutAt?: string;
-  dueAt?: string;
   dueDate?: string;
+  dueAt?: string;
   returnedAt?: string | null;
   status?: string;
   renewCount?: number;
   maxRenewals?: number;
   fineAmount?: number;
   fine?: number;
+  fineStatus?: string;
+  overdue?: boolean;
+  daysOverdue?: number;
+  loanType?: "PHYSICAL" | "EBOOK" | string;
+  ebookLoanId?: number;
+  bookEbookId?: number;
+  paymentId?: number;
+  expiredAt?: string | null;
 };
 
 export type RenewBorrowResponse = BorrowRecord & {
@@ -39,16 +54,21 @@ export type HoldRecord = {
 };
 
 export type FineRecord = {
-  fineId?: number;
-  id?: number;
   borrowId?: number;
+  memberId?: number;
+  bookId?: number;
   bookTitle?: string;
-  title?: string;
-  amount?: number;
-  status?: string;
+  bookCopyId?: number;
+  itemBarcode?: string;
+  borrowedAt?: string;
+  dueDate?: string;
   returnedAt?: string | null;
-  note?: string | null;
-  reason?: string | null;
+  fineAmount?: number;
+  fineCalculatedAt?: string;
+  finePaidAt?: string | null;
+  fineWaivedBy?: number | null;
+  fineWaivedReason?: string | null;
+  fineStatus?: string;
 };
 
 export type CheckoutRequest = {
@@ -119,7 +139,7 @@ export type BookImportJob = {
 };
 
 export type StaffLoanRecord = {
-  borrowId?: number;
+  borrowId?: number | null;
   id?: number;
   memberId?: number;
   memberName?: string;
@@ -127,23 +147,28 @@ export type StaffLoanRecord = {
   bookId?: number;
   bookTitle?: string;
   title?: string;
-  bookCopyId?: number;
-  itemBarcode?: string;
-  barcode?: string;
-  copyStatus?: string;
+  bookCopyId?: number | null;
+  itemBarcode?: string | null;
+  barcode?: string | null;
+  copyStatus?: string | null;
   borrowedAt?: string;
   checkoutAt?: string;
   dueDate?: string;
   dueAt?: string;
   returnedAt?: string | null;
   status?: string;
-  renewCount?: number;
-  maxRenewals?: number;
+  renewCount?: number | null;
+  maxRenewals?: number | null;
   fineAmount?: number;
   fine?: number;
   fineStatus?: string;
   overdue?: boolean;
   daysOverdue?: number;
+  loanType?: "PHYSICAL" | "EBOOK" | string;
+  ebookLoanId?: number | null;
+  bookEbookId?: number | null;
+  paymentId?: number | null;
+  expiredAt?: string | null;
 };
 
 export type StaffLoanSearchParams = {

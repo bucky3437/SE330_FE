@@ -7,6 +7,8 @@ import {
   AuthorSearchParams,
   Book,
   BookCoverImage,
+  BookEbook,
+  BookEbookInfo,
   BookCopy,
   BookCopySearchParams,
   BookPayload,
@@ -16,10 +18,11 @@ import {
   CopyPayload,
   ImportCsvResult,
   PageResult,
+  UpdateBookEbookPayload,
   UpdateBookPayload,
 } from "../types/catalog.type";
 
-const REQUEST_TIMEOUT_MS = 120000;
+const REQUEST_TIMEOUT_MS = 300000;
 const DEFAULT_AUTHOR_PAGE = "0";
 const DEFAULT_AUTHOR_PAGE_SIZE = "6";
 
@@ -203,6 +206,31 @@ export function getBook(bookId: string) {
   return catalogFetch<Book>(`/api/books/${bookId}`);
 }
 
+export function getBookEbookInfo(bookId: string) {
+  return catalogFetch<BookEbookInfo>(`/api/books/${bookId}/ebook`);
+}
+
+export function getBookEbookManagementDetail(bookId: string, bookEbookId: string, accessToken: string | null) {
+  return catalogFetch<BookEbook>(`/api/books/${bookId}/ebooks/${bookEbookId}`, undefined, accessToken);
+}
+
+export function updateBookEbookMetadata(
+  bookId: string,
+  bookEbookId: string,
+  payload: UpdateBookEbookPayload,
+  accessToken: string | null,
+) {
+  return catalogFetch<BookEbook>(
+    `/api/books/${bookId}/ebooks/${bookEbookId}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+    accessToken,
+  );
+}
+
 export function createBook(payload: BookPayload, accessToken: string | null) {
   return catalogFetch<Book>(
     "/api/books",
@@ -261,6 +289,20 @@ export function updateBookCover(bookId: string, file: File, accessToken: string 
     `/api/books/${bookId}/cover`,
     {
       method: "PUT",
+      body: formData,
+    },
+    accessToken,
+  );
+}
+
+export function uploadBookEbook(bookId: string, file: File, accessToken: string | null) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return catalogFetch<BookEbook>(
+    `/api/books/${bookId}/ebooks`,
+    {
+      method: "POST",
       body: formData,
     },
     accessToken,

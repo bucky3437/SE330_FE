@@ -18,7 +18,7 @@ const borrowingGuideCopy = {
     loanEyebrow: "Loan periods",
     loanTitle: "Borrow by material type",
     loanDescription: "Loan policies are built to balance generous access with fair circulation for high-demand materials.",
-    myLoans: "My Loans",
+    myLoans: "My Borrows",
     myHolds: "My Holds",
     headings: ["Material", "Loan period", "Renewal", "Notes"],
     loanRules: [

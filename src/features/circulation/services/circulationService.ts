@@ -300,12 +300,14 @@ function tryParseJson(text: string) {
   }
 }
 
-export function getMyBorrows(accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
-  return apiFetchWithAuthRetry<BorrowRecord[]>("/api/borrows/my", undefined, accessToken, refreshAccessToken);
+export function getMyBorrows(params: { page?: number; size?: number } = {}, accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
+  const { page = 0, size = 20 } = params;
+  return apiFetchWithAuthRetry<BorrowRecord[]>(`/api/borrows/my?page=${page}&size=${size}`, undefined, accessToken, refreshAccessToken);
 }
 
-export function getMyBorrowHistory(accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
-  return apiFetchWithAuthRetry<BorrowRecord[]>("/api/borrows/my/history", undefined, accessToken, refreshAccessToken);
+export function getMyBorrowHistory(params: { page?: number; size?: number } = {}, accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
+  const { page = 0, size = 20 } = params;
+  return apiFetchWithAuthRetry<BorrowRecord[]>(`/api/borrows/my/history?page=${page}&size=${size}`, undefined, accessToken, refreshAccessToken);
 }
 
 export function renewMyBorrow(borrowId: string, accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
@@ -341,8 +343,9 @@ export function checkoutHold(holdId: string, accessToken: string | null, refresh
   return apiFetchWithIdempotency<CheckoutResponse>(`/api/staff/holds/${holdId}/checkout`, { method: "POST" }, accessToken, refreshAccessToken);
 }
 
-export function getMyFines(accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
-  return apiFetchWithAuthRetry<FineRecord[]>("/api/fines/my", undefined, accessToken, refreshAccessToken);
+export function getMyFines(params: { page?: number; size?: number } = {}, accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {
+  const { page = 0, size = 20 } = params;
+  return apiFetchWithAuthRetry<FineRecord[]>(`/api/fines/my?page=${page}&size=${size}`, undefined, accessToken, refreshAccessToken);
 }
 
 export function previewCheckout(payload: CheckoutRequest, accessToken: string | null, refreshAccessToken?: AccessTokenRefresher) {

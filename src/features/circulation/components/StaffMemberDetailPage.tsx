@@ -200,7 +200,7 @@ export function StaffMemberDetailPage({ memberId }: StaffMemberDetailPageProps) 
       wide
       eyebrow="Borrower profile"
       title={member?.fullName || `Member ${memberId}`}
-      description="Review member identity, circulation limits, open loans, history, and overdue exposure from one staff view."
+      description="Review member identity, circulation limits, open physical loans, ebook access, history, and overdue exposure from one staff view."
       actions={
         <>
           <SecondaryAction href="/staff/members">Back to borrowers</SecondaryAction>
@@ -238,7 +238,7 @@ export function StaffMemberDetailPage({ memberId }: StaffMemberDetailPageProps) 
               </dl>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <SummaryCard label="Open loans" value={String(member.openLoansCount ?? member.activeLoansCount ?? 0)} />
+              <SummaryCard label="Open loans/access" value={String(member.openLoansCount ?? member.activeLoansCount ?? 0)} />
               <SummaryCard label="Overdue loans" value={String(member.overdueLoansCount ?? 0)} danger={(member.overdueLoansCount ?? 0) > 0} />
               <SummaryCard label="Loan records" value={String(member.borrowHistoryCount ?? 0)} />
               <SummaryCard label="Unpaid fines" value={money(member.unpaidFineTotal)} danger={(member.unpaidFineTotal ?? 0) > 0} />
@@ -258,13 +258,16 @@ export function StaffMemberDetailPage({ memberId }: StaffMemberDetailPageProps) 
                 <option value="OVERDUE">Overdue</option>
                 <option value="RETURNED">Returned</option>
                 <option value="LOST">Lost</option>
+                <option value="ACTIVE">Active ebook</option>
+                <option value="EXPIRED">Expired ebook</option>
+                <option value="REVOKED">Revoked ebook</option>
               </select>
             </div>
           </form>
 
           <div className="mt-6">
             {isLoadingLoans ? (
-              <TableSkeleton rows={6} columns={9} />
+              <TableSkeleton rows={6} columns={11} />
             ) : (
               <>
                 {loanError ? <div className="mb-4"><Notice tone="error" message={loanError} /></div> : null}
@@ -318,7 +321,7 @@ function shouldSkipLoanRequest(member: StaffMemberDetail, filters: StaffMemberLo
       return overdueCount === 0;
     }
 
-    if (["BORROWED", "LOST"].includes(status)) {
+    if (["BORROWED", "LOST", "ACTIVE", "EXPIRED", "REVOKED"].includes(status)) {
       return openCount === 0;
     }
 
@@ -330,7 +333,7 @@ function shouldSkipLoanRequest(member: StaffMemberDetail, filters: StaffMemberLo
       return overdueCount === 0;
     }
 
-    if (["", "BORROWED", "LOST"].includes(status)) {
+    if (["", "BORROWED", "LOST", "ACTIVE"].includes(status)) {
       return openCount === 0;
     }
   }

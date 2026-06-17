@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { CatalogShell, Notice, SecondaryAction } from "@/features/catalog/components/CatalogShell";
 import { useLanguage } from "@/features/i18n/context/LanguageContext";
@@ -10,7 +12,7 @@ import { formatDate, money, recordId, statusLabel, titleOf } from "./circulation
 
 const copy = {
   en: {
-    eyebrow: "My loans",
+    eyebrow: "My borrows",
     title: "Current borrowed books",
     description: "Track active loans, due dates, renewals, and any fines attached to your current borrowing.",
     history: "Borrow history",
@@ -21,7 +23,7 @@ const copy = {
     empty: "You do not have active loans.",
     renewing: "Renewing...",
     renew: "Renew",
-    headings: ["Book", "Barcode", "Borrowed", "Due", "Status", "Renewals", "Fine", "Action"],
+    headings: ["Book", "Borrowed", "Due", "Status", "Renewals", "Fine"],
   },
   vi: {
     eyebrow: "Sách đang mượn",
@@ -35,7 +37,7 @@ const copy = {
     empty: "Bạn chưa có sách đang mượn.",
     renewing: "Đang gia hạn...",
     renew: "Gia hạn",
-    headings: ["Sách", "Mã bản sao", "Ngày mượn", "Hạn trả", "Trạng thái", "Gia hạn", "Phạt", "Thao tác"],
+    headings: ["Sách", "Ngày mượn", "Hạn trả", "Trạng thái", "Gia hạn", "Phạt"],
   },
 };
 
@@ -52,7 +54,7 @@ export function UserLoansPage() {
 
   useEffect(() => {
     let isMounted = true;
-    getMyBorrows(accessToken, refreshAccessToken)
+    getMyBorrows({}, accessToken, refreshAccessToken)
       .then((items) => {
         if (isMounted) {
           setLoans(items ?? []);
@@ -111,19 +113,52 @@ export function UserLoansPage() {
           <tbody>
             {loans.map((loan) => {
               const id = recordId(loan);
+              const isEbook = loan.loanType === "EBOOK";
+              const isActive = loan.status === "ACTIVE";
+
               return (
-                <tr key={id || loan.barcode} className="border-t border-[#EDEDF2]">
-                  <td className="px-4 py-4 font-bold text-[#000054]">{titleOf(loan)}</td>
-                  <td className="px-4 py-4">{loan.barcode ?? "-"}</td>
-                  <td className="px-4 py-4">{formatDate(loan.borrowedAt ?? loan.checkoutAt, locale)}</td>
-                  <td className="px-4 py-4">{formatDate(loan.dueAt ?? loan.dueDate, locale)}</td>
-                  <td className="px-4 py-4">{statusLabel(loan.status, locale)}</td>
-                  <td className="px-4 py-4">{loan.renewCount ?? 0} / {loan.maxRenewals ?? "-"}</td>
-                  <td className="px-4 py-4">{money(loan.fineAmount ?? loan.fine, locale)}</td>
+                <tr key={id || loan.barcode || loan.ebookLoanId} className="border-t border-[#EDEDF2] hover:bg-[#F8FAFC] transition-colors group">
                   <td className="px-4 py-4">
-                    <button type="button" onClick={() => handleRenew(id)} disabled={!id || renewingBorrowId !== null} className="rounded-full border border-[#D9DCE8] px-3 py-1.5 font-bold text-[#000054] disabled:opacity-50">
-                      {renewingBorrowId === id ? text.renewing : text.renew}
-                    </button>
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg ${isEbook ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'}`}>
+                        <Icon name={isEbook ? "smartphone" : "book"} size={16} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-[#0B1026] line-clamp-2 max-w-[280px]" title={titleOf(loan)}>
+                          {titleOf(loan)}
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wider ${isEbook ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {isEbook ? 'Ebook' : 'Physical'}
+                          </span>
+                          {!isEbook && loan.barcode && (
+                            <span className="font-mono text-[10px] font-medium text-slate-500">{loan.barcode}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap text-slate-600">{formatDate(loan.borrowedAt ?? loan.checkoutAt, locale)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span className={`font-semibold ${loan.overdue ? 'text-red-600' : 'text-slate-700'}`}>
+                      {formatDate(loan.dueAt ?? loan.dueDate ?? loan.expiredAt, locale)}
+                    </span>
+                    {loan.overdue && <span className="ml-2 rounded bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-700">OVERDUE</span>}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap">{statusLabel(loan.status, locale)}</td>
+                  <td className="px-4 py-4 whitespace-nowrap text-center text-slate-600">
+                    {!isEbook ? (
+                      <span className="font-mono">{loan.renewCount ?? 0} / {loan.maxRenewals ?? "-"}</span>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-4 whitespace-nowrap font-medium text-slate-700">
+                    {typeof loan.fineAmount === "number" || typeof loan.fine === "number" ? (
+                      <>
+                        {(loan.fineAmount ?? loan.fine ?? 0).toLocaleString("vi-VN")} <span className="text-[0.7em] text-slate-400 font-bold">VND</span>
+                      </>
+                    ) : "-"}
                   </td>
                 </tr>
               );

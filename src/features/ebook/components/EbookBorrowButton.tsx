@@ -17,7 +17,7 @@ type Props = {
  * Nút "Mượn ebook" nhúng vào BookDetailPage.
  * Sau khi mượn thành công, hiển thị link đọc luôn.
  */
-export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
+export function EbookBorrowButton({ bookId, hasEbook }: Props) {
   const { accessToken, refresh, isAuthenticated } = useAuth();
   const [loan, setLoan] = useState<EbookLoan | null>(null);
   const [loading, setLoading] = useState(false);
@@ -45,20 +45,32 @@ export function EbookBorrowButton({ bookId, bookTitle, hasEbook }: Props) {
     }
   }
 
-  if (loan?.status === "ACTIVE" && loan.ebookReadUrl) {
+  if (loan?.status === "ACTIVE") {
+    const expiresAt = loan.expiresAt ?? loan.expiredAt;
+
     return (
       <div className="inline-flex flex-col gap-2">
-        <a
-          href={loan.ebookReadUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group inline-flex items-center justify-center gap-2 rounded-full bg-[#000054] px-5 py-3 text-sm font-bold text-white outline-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#000080] hover:shadow-lg active:translate-y-0 active:scale-[0.98]"
-        >
-          Read ebook
-          <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-        </a>
+        {loan.ebookReadUrl ? (
+          <a
+            href={loan.ebookReadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex items-center justify-center gap-2 rounded-full bg-[#000054] px-5 py-3 text-sm font-bold text-white outline-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#000080] hover:shadow-lg active:translate-y-0 active:scale-[0.98]"
+          >
+            Read ebook
+            <span aria-hidden="true" className="transition-transform duration-200 group-hover:translate-x-1">→</span>
+          </a>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="inline-flex cursor-default items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white"
+          >
+            Ebook borrowed
+          </button>
+        )}
         <p className="text-xs text-gray-500 text-center">
-          Expires {loan.expiresAt ? new Date(loan.expiresAt).toLocaleDateString("en-US") : "–"} ·{" "}
+          Expires {expiresAt ? new Date(expiresAt).toLocaleDateString("en-US") : "–"} ·{" "}
           <Link href="/user/ebook-loans" className="text-[#337AB7] hover:underline">Manage</Link>
         </p>
       </div>

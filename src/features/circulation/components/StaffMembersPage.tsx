@@ -147,7 +147,7 @@ export function StaffMembersPage() {
       wide
       eyebrow="Staff borrowers"
       title="Borrower registry"
-      description="Search library members and review circulation summary counts before opening a borrower profile."
+      description="Search library members and review physical loan plus ebook access counts before opening a borrower profile."
       actions={
         <>
           <SecondaryAction href="/staff/loans">Loan monitor</SecondaryAction>
@@ -183,7 +183,7 @@ export function StaffMembersPage() {
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
         <MetricCard label="Visible borrowers" value={String(pageStats.visible)} />
-        <MetricCard label="Active loans in view" value={String(pageStats.activeLoans)} />
+        <MetricCard label="Active loans/access" value={String(pageStats.activeLoans)} />
         <MetricCard label="Overdue borrowers" value={String(pageStats.overdueMembers)} tone={pageStats.overdueMembers ? "danger" : "normal"} />
       </div>
 
@@ -217,7 +217,7 @@ function MembersTable({ members }: { members: StaffMemberSummary[] }) {
       <table className="w-full min-w-[1060px] border-collapse bg-white text-left text-sm">
         <thead className="bg-[#000054] text-white">
           <tr>
-            {["Borrower", "Contact", "Role", "Status", "Loans", "Holds", "Unpaid fines", "Action"].map((heading) => (
+            {["Borrower", "Contact", "Role", "Status", "Loans/access", "Holds", "Unpaid fines", "Action"].map((heading) => (
               <th key={heading} className="px-4 py-3 font-bold">{heading}</th>
             ))}
           </tr>

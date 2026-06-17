@@ -49,11 +49,11 @@ const copy = {
     open: "Open >",
     waitingForData: "Waiting for data",
     metrics: {
-      activeLoans: ["Active loans", "Books currently checked out."],
-      overdueLoans: ["Overdue loans", "Loans needing staff follow-up."],
+      activeLoans: ["Active loans/access", "Physical loans and ebook access currently active."],
+      overdueLoans: ["Overdue loans/access", "Records needing staff follow-up."],
       readyHolds: ["Ready holds", "Reservations waiting at pickup."],
       unpaidFines: ["Unpaid fines", "total outstanding."],
-      borrowedToday: ["Borrowed today", "Checkout activity for today."],
+      borrowedToday: ["Loans granted today", "Physical checkouts and ebook access granted today."],
       returnedToday: ["Returned today", "Check-in activity for today."],
     },
     actionItems: {
@@ -92,11 +92,11 @@ const copy = {
     open: "Mở >",
     waitingForData: "Đang chờ dữ liệu",
     metrics: {
-      activeLoans: ["Đang mượn", "Sách hiện đang được mượn."],
-      overdueLoans: ["Quá hạn", "Các lượt mượn cần staff theo dõi."],
+      activeLoans: ["Đang mượn/đọc", "Lượt mượn sách giấy và quyền đọc ebook đang hiệu lực."],
+      overdueLoans: ["Quá hạn", "Các bản ghi cần staff theo dõi."],
       readyHolds: ["Sẵn sàng nhận", "Lượt đặt giữ đang chờ nhận tại quầy."],
       unpaidFines: ["Phạt chưa trả", "tổng còn tồn."],
-      borrowedToday: ["Mượn hôm nay", "Hoạt động checkout trong ngày."],
+      borrowedToday: ["Cấp lượt hôm nay", "Checkout sách giấy và quyền đọc ebook được cấp trong ngày."],
       returnedToday: ["Trả hôm nay", "Hoạt động check-in trong ngày."],
     },
     actionItems: {
@@ -413,7 +413,13 @@ function formatNumber(value?: number, locale: "en" | "vi" = "en") {
 }
 
 function formatCurrency(value?: number, locale: "en" | "vi" = "en") {
-  return typeof value === "number" ? value.toLocaleString(locale === "vi" ? "vi-VN" : "en-US", { style: "currency", currency: "USD" }) : "$0.00";
+  return typeof value === "number" ? (
+    <>
+      {value.toLocaleString("vi-VN")} <span className="text-[0.7em] opacity-80 font-bold">VND</span>
+    </>
+  ) : (
+    <>0 <span className="text-[0.7em] opacity-80 font-bold">VND</span></>
+  );
 }
 
 function formatDateTime(value: string, locale: "en" | "vi") {

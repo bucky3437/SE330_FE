@@ -35,6 +35,57 @@ export type BookCoverImage = {
   oldImageStatus?: string | null;
 };
 
+export type BookEbook = {
+  bookEbookId?: number;
+  bookId?: number;
+  provider?: string | null;
+  publicId?: string | null;
+  resourceType?: string | null;
+  deliveryType?: string | null;
+  format?: string | null;
+  mimeType?: string | null;
+  originalFilename?: string | null;
+  version?: number | null;
+  sizeBytes?: number | null;
+  checksum?: string | null;
+  status?: string | null;
+  maxConcurrentLoans?: number | null;
+  loanDurationDays?: number | null;
+  accessType?: string | null;
+  accessFee?: number | null;
+  currency?: string | null;
+  accessDurationDays?: number | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
+export type UpdateBookEbookPayload = {
+  maxConcurrentLoans?: number;
+  loanDurationDays?: number;
+  accessType?: "FREE" | "PAID";
+  accessFee?: number;
+  currency?: string;
+  accessDurationDays?: number;
+  status?: string;
+};
+
+export type BookEbookInfo = {
+  bookEbookId?: number;
+  bookId?: number;
+  available?: boolean;
+  status?: string | null;
+  format?: string | null;
+  sizeBytes?: number | null;
+  maxConcurrentLoans?: number | null;
+  loanDurationDays?: number | null;
+  accessType?: string | null;
+  requiresPayment?: boolean;
+  accessFee?: number | null;
+  currency?: string | null;
+  accessDurationDays?: number | null;
+  updatedAt?: string | null;
+};
+
 export type Book = {
   bookId?: number;
   id?: number;
@@ -42,6 +93,8 @@ export type Book = {
   isbn: string;
   imageUrl?: string | null;
   coverImage?: BookCoverImage | null;
+  ebook?: BookEbook | null;
+  bookEbook?: BookEbook | null;
   authors?: Author[] | string[];
   category?: Category | string | null;
   categoryId?: number | null;

@@ -217,10 +217,28 @@ function UserMenu({
         ) : null}
         {!hasStaffAccess ? (
           <Link
+            href="/user/fines"
+            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
+          >
+            {t("menu.myFines")}
+            <span aria-hidden="true">&gt;</span>
+          </Link>
+        ) : null}
+        {!hasStaffAccess ? (
+          <Link
             href="/user/holds"
             className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
           >
             {t("menu.myHolds")}
+            <span aria-hidden="true">&gt;</span>
+          </Link>
+        ) : null}
+        {!hasStaffAccess ? (
+          <Link
+            href="/user/receipts"
+            className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-semibold text-[#111827] transition hover:bg-black hover:text-white"
+          >
+            My receipts
             <span aria-hidden="true">&gt;</span>
           </Link>
         ) : null}
@@ -279,6 +297,13 @@ function UserMenu({
               className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028] hover:text-white"
             >
               {t("menu.categories")}
+              <span aria-hidden="true">&gt;</span>
+            </Link>
+            <Link
+              href="/admin/payments"
+              className="mt-1 flex items-center justify-between rounded-xl px-3 py-3 text-sm font-bold text-[#E60028] transition hover:bg-[#E60028] hover:text-white"
+            >
+              Payment dashboard
               <span aria-hidden="true">&gt;</span>
             </Link>
           </>

@@ -8,25 +8,29 @@ import { Icon } from "@/components/ui/Icon";
 import { ApiError } from "@/types/api.type";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { hasStaffAccessFromToken } from "@/features/auth/utils/authRoles";
-import { Author, Book, BookCoverImage, Category } from "../types/catalog.type";
+import { Author, Book, BookCoverImage, BookEbook, BookEbookInfo, Category, UpdateBookEbookPayload } from "../types/catalog.type";
 import {
   addBookCover,
   createBook,
   getAuthors,
   getBook,
+  getBookEbookInfo,
+  getBookEbookManagementDetail,
   getCategories,
   updateBook,
   updateBookAuthors,
   updateBookCover,
+  updateBookEbookMetadata,
+  uploadBookEbook,
 } from "../services/catalogService";
 import { authorLabel, bookCoverAlt, bookCoverUrl, categoryIdOf, entityIdOf } from "./catalogHelpers";
 import { CatalogShell, Notice } from "./CatalogShell";
 
 const MAX_COVER_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_EBOOK_SIZE_BYTES = 100 * 1024 * 1024;
 const AUTHOR_PICKER_PAGE_SIZE = 6;
-const SAVE_BAR_FOOTER_HIDE_OFFSET = 96;
-const SCROLL_DIRECTION_THRESHOLD = 4;
 const ACCEPTED_COVER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ACCEPTED_EBOOK_TYPES = new Set(["application/pdf"]);
 
 export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
   const router = useRouter();
@@ -40,12 +44,15 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
   const [isLoading, setIsLoading] = useState(mode === "edit");
   const [isSaving, setIsSaving] = useState(false);
   const [isCoverUploading, setIsCoverUploading] = useState(false);
-  const [isSaveBarVisible, setIsSaveBarVisible] = useState(true);
+  const [isEbookUploading, setIsEbookUploading] = useState(false);
+  const [isEbookPolicySaving, setIsEbookPolicySaving] = useState(false);
+  const [managedEbook, setManagedEbook] = useState<BookEbook | null>(null);
+  const [ebookDetailError, setEbookDetailError] = useState("");
   const [authorSearch, setAuthorSearch] = useState("");
   const [selectedAuthorIds, setSelectedAuthorIds] = useState<Set<string>>(() => new Set());
   const coverFileInputRef = useRef<HTMLInputElement | null>(null);
+  const ebookFileInputRef = useRef<HTMLInputElement | null>(null);
   const authorSelectionSourceRef = useRef("");
-  const lastScrollYRef = useRef(0);
   const isEdit = mode === "edit";
   const bookId = params.bookId ?? "";
 
@@ -82,6 +89,56 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
   }, [authorSearch, bookId, isEdit]);
 
   useEffect(() => {
+    if (!isEdit || !bookId) return;
+
+    let isMounted = true;
+
+    getBookEbookInfo(bookId)
+      .then(async (ebookInfo) => {
+        const bookEbookId = ebookInfo.bookEbookId;
+
+        if (isMounted) {
+          setManagedEbook(bookEbookFromPublicInfo(ebookInfo));
+        }
+
+        if (typeof bookEbookId !== "number") {
+          return null;
+        }
+
+        try {
+          return await loadBookEbookManagementDetail(bookId, String(bookEbookId), accessToken, async () => (await refresh())?.accessToken ?? null);
+        } catch (detailError) {
+          if (isMounted) {
+            setEbookDetailError(detailError instanceof Error ? detailError.message : "Could not load ebook metadata.");
+          }
+          return null;
+        }
+      })
+      .then((ebookDetail) => {
+        if (!isMounted) return;
+        if (ebookDetail) {
+          setManagedEbook(ebookDetail);
+          setEbookDetailError("");
+        }
+      })
+      .catch((detailError) => {
+        if (!isMounted) return;
+
+        if (detailError instanceof ApiError && detailError.status === 404) {
+          setManagedEbook(null);
+          setEbookDetailError("");
+          return;
+        }
+
+        setEbookDetailError(detailError instanceof Error ? detailError.message : "Could not load ebook metadata.");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accessToken, bookId, isEdit, refresh]);
+
+  useEffect(() => {
     const sourceKey = book ? `book:${entityIdOf(book)}` : `mode:${mode}`;
 
     if (authorSelectionSourceRef.current === sourceKey) {
@@ -92,60 +149,17 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
     setSelectedAuthorIds(new Set((book?.authors ?? []).map((author) => (typeof author === "string" ? "" : entityIdOf(author))).filter(Boolean)));
   }, [book, mode]);
 
-  useEffect(() => {
-    let frameId = 0;
-
-    function updateSaveBarVisibility() {
-      frameId = 0;
-
-      const currentScrollY = window.scrollY;
-      const scrollDelta = currentScrollY - lastScrollYRef.current;
-      const isScrollingDown = scrollDelta > SCROLL_DIRECTION_THRESHOLD;
-      const isScrollingUp = scrollDelta < -SCROLL_DIRECTION_THRESHOLD;
-      const footer = document.querySelector("footer");
-      const footerTop = footer?.getBoundingClientRect().top ?? Number.POSITIVE_INFINITY;
-      const isNearFooter = footerTop <= window.innerHeight + SAVE_BAR_FOOTER_HIDE_OFFSET;
-
-      if (!isNearFooter || isScrollingUp) {
-        setIsSaveBarVisible(true);
-      } else if (isScrollingDown) {
-        setIsSaveBarVisible(false);
-      }
-
-      if (isScrollingDown || isScrollingUp) {
-        lastScrollYRef.current = currentScrollY;
-      }
-    }
-
-    function requestVisibilityUpdate() {
-      if (frameId) return;
-      frameId = window.requestAnimationFrame(updateSaveBarVisibility);
-    }
-
-    lastScrollYRef.current = window.scrollY;
-    requestVisibilityUpdate();
-    window.addEventListener("scroll", requestVisibilityUpdate, { passive: true });
-    window.addEventListener("resize", requestVisibilityUpdate);
-
-    return () => {
-      if (frameId) {
-        window.cancelAnimationFrame(frameId);
-      }
-      window.removeEventListener("scroll", requestVisibilityUpdate);
-      window.removeEventListener("resize", requestVisibilityUpdate);
-    };
-  }, []);
-
   const visibleAuthors = useMemo(() => authors.slice(0, AUTHOR_PICKER_PAGE_SIZE), [authors]);
 
   const coverUrl = book ? bookCoverUrl(book, "detail") : "";
   const hasCover = Boolean(coverUrl);
+  const ebook = managedEbook ?? bookEbookOf(book);
   const currentCategoryId = book ? categoryIdOf(book) : "";
   const currentLanguage = book?.language ?? "";
-  const canUseCoverUploadApi = hasStaffAccess || hasStaffAccessFromToken(accessToken);
-  const coverUploadPermissionNotice = canUseCoverUploadApi
+  const canUseMediaUploadApi = hasStaffAccess || hasStaffAccessFromToken(accessToken);
+  const mediaUploadPermissionNotice = canUseMediaUploadApi
     ? ""
-    : `Cover upload requires LIBRARIAN or ADMIN. Current role is ${currentUser?.role ?? "unknown"}.`;
+    : `Media upload requires LIBRARIAN or ADMIN. Current role is ${currentUser?.role ?? "unknown"}.`;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -175,6 +189,8 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
           ...(current ?? updatedBook),
           ...updatedBook,
           coverImage: current?.coverImage ?? updatedBook.coverImage,
+          ebook: current?.ebook ?? updatedBook.ebook,
+          bookEbook: current?.bookEbook ?? updatedBook.bookEbook,
           imageUrl: current?.imageUrl ?? updatedBook.imageUrl,
         }));
         setMessage("Book metadata and authors were updated.");
@@ -212,8 +228,8 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
       return;
     }
 
-    if (!canUseCoverUploadApi) {
-      setError(coverUploadPermissionNotice);
+    if (!canUseMediaUploadApi) {
+      setError(mediaUploadPermissionNotice);
       return;
     }
 
@@ -265,6 +281,119 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
   function handleCoverDrop(event: DragEvent<HTMLButtonElement>) {
     event.preventDefault();
     void handleCoverFile(event.dataTransfer.files.item(0));
+  }
+
+  async function handleEbookFile(file?: File | null) {
+    if (!file) return;
+
+    if (!isEdit || !bookId) {
+      setError("Save this book before uploading an ebook PDF.");
+      return;
+    }
+
+    if (!isAcceptedEbookFile(file)) {
+      setError("Ebook media must be a PDF file.");
+      return;
+    }
+
+    if (file.size > MAX_EBOOK_SIZE_BYTES) {
+      setError("Ebook PDF must be 100MB or smaller.");
+      return;
+    }
+
+    if (!canUseMediaUploadApi) {
+      setError(mediaUploadPermissionNotice);
+      return;
+    }
+
+    setIsEbookUploading(true);
+    try {
+      const uploadedEbook = await uploadBookEbook(bookId, file, accessToken);
+
+      setBook((current) => {
+        if (!current) return current;
+        return applyEbookToBook(current, uploadedEbook);
+      });
+      setManagedEbook(uploadedEbook);
+      setMessage("Ebook PDF was uploaded.");
+      setError("");
+    } catch (uploadError) {
+      if (uploadError instanceof ApiError && (uploadError.status === 401 || uploadError.status === 403)) {
+        const refreshedSession = await refresh();
+
+        if (refreshedSession?.accessToken) {
+          try {
+            const uploadedEbook = await uploadBookEbook(bookId, file, refreshedSession.accessToken);
+
+            setBook((current) => {
+              if (!current) return current;
+              return applyEbookToBook(current, uploadedEbook);
+            });
+            setManagedEbook(uploadedEbook);
+            setMessage("Ebook PDF was uploaded.");
+            setError("");
+            return;
+          } catch (retryError) {
+            setError(getEbookUploadErrorMessage(retryError, currentUser?.role));
+            return;
+          }
+        }
+      }
+
+      setError(getEbookUploadErrorMessage(uploadError, currentUser?.role));
+    } finally {
+      setIsEbookUploading(false);
+    }
+  }
+
+  async function handleEbookPolicySave(payload: UpdateBookEbookPayload) {
+    const bookEbookId = ebook?.bookEbookId;
+
+    if (!isEdit || !bookId || typeof bookEbookId !== "number") {
+      setError("Upload an ebook PDF before editing ebook policy.");
+      return false;
+    }
+
+    if (!canUseMediaUploadApi) {
+      setError(mediaUploadPermissionNotice);
+      return false;
+    }
+
+    setIsEbookPolicySaving(true);
+    try {
+      const updatedEbook = await saveBookEbookPolicy(
+        bookId,
+        String(bookEbookId),
+        payload,
+        accessToken,
+        async () => (await refresh())?.accessToken ?? null,
+      );
+
+      setBook((current) => {
+        if (!current) return current;
+        return applyEbookToBook(current, updatedEbook);
+      });
+      setManagedEbook(updatedEbook);
+      setMessage("Ebook policy and pricing were updated.");
+      setError("");
+      return true;
+    } catch (policyError) {
+      setError(getEbookPolicyErrorMessage(policyError, currentUser?.role));
+      return false;
+    } finally {
+      setIsEbookPolicySaving(false);
+    }
+  }
+
+  function handleEbookInputChange(event: FormEvent<HTMLInputElement>) {
+    const input = event.currentTarget;
+    void handleEbookFile(input.files?.item(0));
+    input.value = "";
+  }
+
+  function handleEbookDrop(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    void handleEbookFile(event.dataTransfer.files.item(0));
   }
 
   function handleAuthorToggle(authorId: string, checked: boolean) {
@@ -395,47 +524,29 @@ export function BookFormPage({ mode }: { mode: "create" | "edit" }) {
           <BookCoverPanel
             book={book}
             coverUrl={coverUrl}
+            ebook={ebook}
+            ebookDetailError={ebookDetailError}
             hasCover={hasCover}
             isCoverUploading={isCoverUploading}
+            isEbookUploading={isEbookUploading}
+            isEbookPolicySaving={isEbookPolicySaving}
             isEdit={isEdit}
-            permissionNotice={coverUploadPermissionNotice}
+            permissionNotice={mediaUploadPermissionNotice}
             fileInputRef={coverFileInputRef}
+            ebookFileInputRef={ebookFileInputRef}
             onDrop={handleCoverDrop}
+            onEbookDrop={handleEbookDrop}
+            onEbookFile={handleEbookFile}
+            onEbookPolicySave={handleEbookPolicySave}
             onFile={handleCoverFile}
+            onOpenEbookFilePicker={() => ebookFileInputRef.current?.click()}
             onOpenFilePicker={() => coverFileInputRef.current?.click()}
+            onEbookInputChange={handleEbookInputChange}
             onInputChange={handleCoverInputChange}
           />
         </div>
 
-        <div
-          aria-hidden={!isSaveBarVisible}
-          style={{ transform: isSaveBarVisible ? "translateY(0)" : "translateY(calc(100% + 1rem))" }}
-          className={`fixed inset-x-0 bottom-0 z-40 border-t border-[#E1E6F0] bg-white/95 px-5 py-5 shadow-[0_-18px_40px_rgba(15,23,42,0.08)] backdrop-blur transition-[opacity,transform] duration-300 ease-out will-change-transform md:px-8 ${
-            isSaveBarVisible ? "opacity-100" : "pointer-events-none opacity-0"
-          }`}
-        >
-          <div className="mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col gap-3 sm:flex-row sm:items-center sm:justify-between 2xl:max-w-[1720px]">
-            <Link
-              href="/staff/books"
-              tabIndex={isSaveBarVisible ? undefined : -1}
-              className="inline-flex h-12 items-center justify-center rounded-xl border border-[#D5DBE8] px-8 text-sm font-black text-[#0B1026] transition hover:border-[#111827]"
-            >
-              Cancel
-            </Link>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <span className="text-sm font-medium text-[#61708F]">Unsaved changes</span>
-              <button
-                type="submit"
-                disabled={isSaving || isLoading || !isSaveBarVisible}
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#E60028] px-8 text-sm font-black text-white shadow-[0_14px_28px_rgba(230,0,40,0.22)] transition hover:-translate-y-0.5 hover:bg-[#c90022] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Icon name="file" size={17} aria-hidden="true" />
-                {isSaving ? "Saving..." : isEdit ? "Save changes" : "Create book"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </form>
+        </form>
     </CatalogShell>
   );
 }
@@ -452,26 +563,46 @@ function BackToStaffBooks() {
 function BookCoverPanel({
   book,
   coverUrl,
+  ebook,
+  ebookDetailError,
   hasCover,
   isCoverUploading,
+  isEbookUploading,
+  isEbookPolicySaving,
   isEdit,
   permissionNotice,
   fileInputRef,
+  ebookFileInputRef,
   onDrop,
+  onEbookDrop,
+  onEbookFile,
+  onEbookPolicySave,
   onFile,
+  onOpenEbookFilePicker,
   onOpenFilePicker,
+  onEbookInputChange,
   onInputChange,
 }: {
   book: Book | null;
   coverUrl: string;
+  ebook: BookEbook | null;
+  ebookDetailError: string;
   hasCover: boolean;
   isCoverUploading: boolean;
+  isEbookUploading: boolean;
+  isEbookPolicySaving: boolean;
   isEdit: boolean;
   permissionNotice: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  ebookFileInputRef: RefObject<HTMLInputElement | null>;
   onDrop: (event: DragEvent<HTMLButtonElement>) => void;
+  onEbookDrop: (event: DragEvent<HTMLButtonElement>) => void;
+  onEbookFile: (file?: File | null) => void;
+  onEbookPolicySave: (payload: UpdateBookEbookPayload) => Promise<boolean>;
   onFile: (file?: File | null) => void;
+  onOpenEbookFilePicker: () => void;
   onOpenFilePicker: () => void;
+  onEbookInputChange: (event: FormEvent<HTMLInputElement>) => void;
   onInputChange: (event: FormEvent<HTMLInputElement>) => void;
 }) {
   const coverImage = book?.coverImage ?? null;
@@ -486,28 +617,26 @@ function BookCoverPanel({
         className="sr-only"
         onChange={onInputChange}
       />
+      <input
+        ref={ebookFileInputRef}
+        type="file"
+        accept="application/pdf,.pdf"
+        className="sr-only"
+        onChange={onEbookInputChange}
+      />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-black text-[#0B1026]">Book cover & images</h2>
-          <p className="mt-2 text-sm text-[#59637A]">One image can be marked as the primary cover displayed to patrons.</p>
+          <h2 className="text-lg font-black text-[#0B1026]">Book media</h2>
+          <p className="mt-2 text-sm text-[#59637A]">Manage the primary cover and protected ebook PDF for this catalog record.</p>
           {permissionNotice ? (
             <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700">
               {permissionNotice}
             </p>
           ) : null}
         </div>
-        <button
-          type="button"
-          onClick={onOpenFilePicker}
-          disabled={!isEdit || isCoverUploading || Boolean(permissionNotice)}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#E60028] px-5 text-sm font-black text-white shadow-[0_14px_28px_rgba(230,0,40,0.22)] transition hover:-translate-y-0.5 hover:bg-[#c90022] disabled:cursor-not-allowed disabled:opacity-55"
-        >
-          <Icon name="upload" size={17} aria-hidden="true" />
-          {isCoverUploading ? "Uploading..." : hasCover ? "Replace image" : "Upload image"}
-        </button>
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_230px]">
+      <div className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_190px]">
         <div className="rounded-2xl border border-[#E1E6F0] bg-white p-4">
           {hasCover && book ? (
             <div className="flex flex-col gap-4 sm:flex-row">
@@ -529,25 +658,6 @@ function BookCoverPanel({
                     className="mt-2 w-full resize-none rounded-xl border border-[#D5DBE8] bg-[#F8FAFC] px-4 py-3 text-sm text-[#334155] outline-none"
                   />
                 </label>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={onOpenFilePicker}
-                    disabled={!isEdit || isCoverUploading || Boolean(permissionNotice)}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#D5DBE8] px-5 text-sm font-black text-[#0B1026] transition hover:border-[#111827] disabled:cursor-not-allowed disabled:opacity-55"
-                  >
-                    <Icon name="upload" size={16} aria-hidden="true" />
-                    Replace
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className="inline-flex h-11 cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-rose-200 px-5 text-sm font-black text-rose-500 opacity-55"
-                  >
-                    <Icon name="trash" size={16} aria-hidden="true" />
-                    Delete
-                  </button>
-                </div>
               </div>
             </div>
           ) : (
@@ -565,6 +675,19 @@ function BookCoverPanel({
           onOpenFilePicker={onOpenFilePicker}
         />
       </div>
+
+      <EbookUploadPanel
+        book={book}
+        ebook={ebook}
+        detailError={ebookDetailError}
+        disabled={!isEdit || isEbookUploading || Boolean(permissionNotice)}
+        isUploading={isEbookUploading}
+        isPolicySaving={isEbookPolicySaving}
+        onDrop={onEbookDrop}
+        onFile={onEbookFile}
+        onOpenFilePicker={onOpenEbookFilePicker}
+        onSavePolicy={onEbookPolicySave}
+      />
 
       <div className="mt-6">
         <p className="text-sm font-black text-[#0B1026]">Image gallery</p>
@@ -619,11 +742,17 @@ function EmptyCoverState({ disabled, onOpenFilePicker }: { disabled: boolean; on
 
 function DropZone({
   disabled,
+  heading = "Upload new cover",
+  hint = "Drag & drop image here",
+  meta = "PNG, JPG, WEBP up to 5MB",
   onDrop,
   onFile,
   onOpenFilePicker,
 }: {
   disabled: boolean;
+  heading?: string;
+  hint?: string;
+  meta?: string;
   onDrop: (event: DragEvent<HTMLButtonElement>) => void;
   onFile: (file?: File | null) => void;
   onOpenFilePicker: () => void;
@@ -641,10 +770,420 @@ function DropZone({
       <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#F6F8FC] text-[#61708F]">
         <Icon name="upload" size={23} aria-hidden="true" />
       </span>
-      <span className="mt-4 font-semibold text-[#334155]">Drag and drop images here</span>
+      <span className="mt-4 font-black text-[#0B1026]">{heading}</span>
+      <span className="mt-2 font-semibold text-[#334155]">{hint}</span>
       <span className="font-black text-[#E60028]">or browse files</span>
-      <span className="mt-2 text-xs font-medium text-[#61708F]">PNG, JPG, WEBP up to 5MB</span>
+      <span className="mt-2 text-xs font-medium text-[#61708F]">{meta}</span>
     </button>
+  );
+}
+
+function EbookUploadPanel({
+  book,
+  ebook,
+  detailError,
+  disabled,
+  isUploading,
+  isPolicySaving,
+  onDrop,
+  onFile,
+  onOpenFilePicker,
+  onSavePolicy,
+}: {
+  book: Book | null;
+  ebook: BookEbook | null;
+  detailError: string;
+  disabled: boolean;
+  isUploading: boolean;
+  isPolicySaving: boolean;
+  onDrop: (event: DragEvent<HTMLButtonElement>) => void;
+  onFile: (file?: File | null) => void;
+  onOpenFilePicker: () => void;
+  onSavePolicy: (payload: UpdateBookEbookPayload) => Promise<boolean>;
+}) {
+  const hasEbook = Boolean(ebook);
+  const [isPolicyOpen, setIsPolicyOpen] = useState(false);
+
+  return (
+    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_190px]">
+      <div className="min-w-0 rounded-2xl border border-[#E1E6F0] bg-white p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-[#FFF1F3] text-[#E60028]">
+              <span className="text-[10px] font-black uppercase leading-none">PDF</span>
+            </span>
+            <div className="min-w-0">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <p className="truncate text-sm font-black text-[#0B1026]">
+                  {hasEbook ? ebookFileName(book, ebook) : "No ebook PDF uploaded"}
+                </p>
+                {hasEbook ? (
+                  <StatusPill status={ebook?.status ?? "ACTIVE"} />
+                ) : (
+                  <span className="inline-flex w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-[#61708F]">
+                    Pending
+                  </span>
+                )}
+              </div>
+              <p className="mt-2 text-sm font-medium text-[#59637A]">
+                {hasEbook ? formatEbookFormat(ebook) : "Protected PDF asset for ebook loans."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2 pl-0 sm:pl-[60px]">
+            {hasEbook ? (
+              <button
+                type="button"
+                onClick={() => setIsPolicyOpen(true)}
+                disabled={disabled || isPolicySaving}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D5DBE8] bg-white px-3 text-xs font-black text-[#0B1026] transition hover:border-[#111827] disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                <Icon name="settings" size={15} aria-hidden="true" />
+                Change policy
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={onOpenFilePicker}
+              disabled={disabled}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#D5DBE8] bg-white px-3 text-xs font-black text-[#0B1026] transition hover:border-[#111827] disabled:cursor-not-allowed disabled:opacity-55"
+            >
+              <Icon name="upload" size={15} aria-hidden="true" />
+              {isUploading ? "Uploading..." : hasEbook ? "Replace PDF" : "Upload PDF"}
+            </button>
+          </div>
+        </div>
+
+        {hasEbook ? (
+          <div className="mt-4 grid gap-2 md:grid-cols-2">
+            <MediaMeta label="Delivery / Storage" value={formatEbookDelivery(ebook)} />
+            <MediaMeta label="Ebook ID" value={formatOptionalNumber(ebook?.bookEbookId)} />
+            <MediaMeta label="Loan policy" value={formatEbookLoanPolicy(ebook)} />
+            <MediaMeta label="Public ID" value={ebook?.publicId ?? "Cloudinary metadata pending"} />
+            <MediaMeta label="Access duration" value={formatDurationDays(ebook?.accessDurationDays)} />
+            <MediaMeta label="Size" value={formatFileSize(ebook?.sizeBytes)} />
+            <MediaMeta label="Access" value={formatEbookAccessPolicy(ebook)} />
+            <MediaMeta label="Updated" value={formatDateTime(ebook?.updatedAt)} />
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-dashed border-[#D5DBE8] bg-[#F8FAFC] px-4 py-3 text-sm font-bold text-[#61708F]">
+            Upload a protected PDF to enable ebook loans, pricing, and access policy controls.
+          </div>
+        )}
+
+        {detailError && !hasEbook ? (
+          <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">
+            Ebook metadata API could not be loaded: {detailError}
+          </p>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpenFilePicker}
+        onDrop={onDrop}
+        onDragOver={(event) => event.preventDefault()}
+        onPaste={(event) => onFile(event.clipboardData.files.item(0))}
+        disabled={disabled}
+        className="flex min-h-52 flex-col items-center justify-center rounded-2xl border border-dashed border-[#C9D1DE] bg-white p-5 text-center text-sm transition hover:border-[#111827] disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#F6F8FC] text-[#61708F]">
+          <Icon name="upload" size={23} aria-hidden="true" />
+        </span>
+        <span className="mt-4 font-black text-[#0B1026]">Upload new PDF</span>
+        <span className="mt-2 font-semibold text-[#334155]">Drag & drop PDF here</span>
+        <span className="font-black text-[#E60028]">or browse files</span>
+        <span className="mt-2 text-xs font-medium text-[#61708F]">PDF up to 100MB</span>
+      </button>
+
+      {isPolicyOpen ? (
+        <EbookPolicyModal
+          ebook={ebook}
+          disabled={!hasEbook || disabled || isPolicySaving}
+          isSaving={isPolicySaving}
+          onClose={() => setIsPolicyOpen(false)}
+          onSave={onSavePolicy}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function EbookPolicyModal({
+  ebook,
+  disabled,
+  isSaving,
+  onClose,
+  onSave,
+}: {
+  ebook: BookEbook | null;
+  disabled: boolean;
+  isSaving: boolean;
+  onClose: () => void;
+  onSave: (payload: UpdateBookEbookPayload) => Promise<boolean>;
+}) {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !isSaving) {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSaving, onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center px-4 py-6">
+      <button
+        type="button"
+        aria-label="Close ebook policy dialog"
+        onClick={onClose}
+        disabled={isSaving}
+        className="absolute inset-0 bg-[#0B1026]/55 backdrop-blur-[2px] disabled:cursor-wait"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ebook-policy-title"
+        className="relative z-10 max-h-[calc(100dvh-3rem)] w-full max-w-3xl overflow-y-auto rounded-2xl border border-[#E1E6F0] bg-white p-5 shadow-[0_28px_90px_rgba(15,23,42,0.28)]"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#E60028]">Ebook settings</p>
+            <h2 id="ebook-policy-title" className="mt-2 text-2xl font-black text-[#0B1026]">
+              Change ebook policy
+            </h2>
+            <p className="mt-1 max-w-xl text-sm font-medium text-[#59637A]">
+              Update pricing, access duration, concurrent loan limit, and ebook availability status.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSaving}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[#D5DBE8] text-[#0B1026] transition hover:border-[#111827] disabled:cursor-not-allowed disabled:opacity-55"
+            aria-label="Close"
+          >
+            <Icon name="x" size={18} aria-hidden="true" />
+          </button>
+        </div>
+
+        <EbookPolicyEditor
+          key={ebookPolicyEditorKey(ebook)}
+          ebook={ebook}
+          disabled={disabled}
+          isSaving={isSaving}
+          onSave={onSave}
+          onSaved={onClose}
+        />
+      </section>
+    </div>
+  );
+}
+
+type EbookPolicyDraft = {
+  accessType: "FREE" | "PAID";
+  accessFee: string;
+  currency: string;
+  accessDurationDays: string;
+  maxConcurrentLoans: string;
+  loanDurationDays: string;
+  status: string;
+};
+
+function EbookPolicyEditor({
+  ebook,
+  disabled,
+  isSaving,
+  onSave,
+  onSaved,
+}: {
+  ebook: BookEbook | null;
+  disabled: boolean;
+  isSaving: boolean;
+  onSave: (payload: UpdateBookEbookPayload) => Promise<boolean>;
+  onSaved?: () => void;
+}) {
+  const [draft, setDraft] = useState<EbookPolicyDraft>(() => ebookPolicyDraftOf(ebook));
+  const isFree = draft.accessType === "FREE";
+
+  function updateDraft<K extends keyof EbookPolicyDraft>(key: K, value: EbookPolicyDraft[K]) {
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "accessType" && value === "FREE" ? { accessFee: "0" } : {}),
+    }));
+  }
+
+  async function handleSave() {
+    const didSave = await onSave(ebookPolicyPayloadOf(draft));
+
+    if (didSave) {
+      onSaved?.();
+    }
+  }
+
+  return (
+    <section className="mt-5 rounded-2xl border border-[#E1E6F0] bg-[#F8FAFC] p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h3 className="text-sm font-black text-[#0B1026]">Ebook policy & pricing</h3>
+          <p className="mt-1 text-xs font-medium text-[#61708F]">
+            Set FREE/PAID access, price, license limit, and reading duration.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={disabled || isSaving}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#111827] px-4 text-xs font-black text-white transition hover:-translate-y-0.5 hover:bg-black disabled:cursor-not-allowed disabled:opacity-55"
+        >
+          <Icon name="check" size={15} aria-hidden="true" />
+          {isSaving ? "Saving..." : "Save policy"}
+        </button>
+      </div>
+
+      {!ebook ? (
+        <p className="mt-4 rounded-xl border border-dashed border-[#C9D1DE] bg-white px-3 py-3 text-xs font-bold text-[#61708F]">
+          Upload an ebook PDF before editing pricing and loan policy.
+        </p>
+      ) : (
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <PolicySelect
+            label="Access type"
+            value={draft.accessType}
+            disabled={disabled}
+            onChange={(value) => updateDraft("accessType", value as EbookPolicyDraft["accessType"])}
+          >
+            <option value="FREE">FREE</option>
+            <option value="PAID">PAID</option>
+          </PolicySelect>
+          <PolicyInput
+            label="Access fee"
+            type="number"
+            min="0"
+            step="1000"
+            value={draft.accessFee}
+            disabled={disabled || isFree}
+            onChange={(value) => updateDraft("accessFee", value)}
+          />
+          <PolicySelect
+            label="Currency"
+            value={draft.currency}
+            disabled={disabled || isFree}
+            onChange={(value) => updateDraft("currency", value)}
+          >
+            <option value="VND">VND</option>
+            <option value="USD">USD</option>
+          </PolicySelect>
+          <PolicyInput
+            label="Access duration days"
+            type="number"
+            min="1"
+            value={draft.accessDurationDays}
+            disabled={disabled}
+            onChange={(value) => updateDraft("accessDurationDays", value)}
+          />
+          <PolicyInput
+            label="Max concurrent loans"
+            type="number"
+            min="1"
+            value={draft.maxConcurrentLoans}
+            disabled={disabled}
+            onChange={(value) => updateDraft("maxConcurrentLoans", value)}
+          />
+          <PolicyInput
+            label="Loan duration days"
+            type="number"
+            min="1"
+            value={draft.loanDurationDays}
+            disabled={disabled}
+            onChange={(value) => updateDraft("loanDurationDays", value)}
+          />
+          <PolicySelect
+            label="Status"
+            value={draft.status}
+            disabled={disabled}
+            onChange={(value) => updateDraft("status", value)}
+          >
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="INACTIVE">INACTIVE</option>
+          </PolicySelect>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PolicyInput({
+  disabled,
+  label,
+  min,
+  onChange,
+  step,
+  type = "text",
+  value,
+}: {
+  disabled: boolean;
+  label: string;
+  min?: string;
+  onChange: (value: string) => void;
+  step?: string;
+  type?: string;
+  value: string;
+}) {
+  return (
+    <label>
+      <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[#61708F]">{label}</span>
+      <input
+        type={type}
+        min={min}
+        step={step}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 h-11 w-full rounded-xl border border-[#D5DBE8] bg-white px-3 text-sm font-bold text-[#0B1026] outline-none transition focus:border-[#111827] focus:shadow-[0_0_0_4px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:bg-[#EEF1F6] disabled:text-[#8A94A6]"
+      />
+    </label>
+  );
+}
+
+function PolicySelect({
+  children,
+  disabled,
+  label,
+  onChange,
+  value,
+}: {
+  children: ReactNode;
+  disabled: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  value: string;
+}) {
+  return (
+    <label>
+      <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[#61708F]">{label}</span>
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-2 h-11 w-full rounded-xl border border-[#D5DBE8] bg-white px-3 text-sm font-bold text-[#0B1026] outline-none transition focus:border-[#111827] focus:shadow-[0_0_0_4px_rgba(15,23,42,0.08)] disabled:cursor-not-allowed disabled:bg-[#EEF1F6] disabled:text-[#8A94A6]"
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function MediaMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-xl bg-[#F8FAFC] px-3 py-2">
+      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#61708F]">{label}</p>
+      <p className="mt-1 truncate text-sm font-bold text-[#0B1026]">{value}</p>
+    </div>
   );
 }
 
@@ -758,6 +1297,28 @@ function StatusPill({ status }: { status?: string | null }) {
   );
 }
 
+function bookEbookOf(book: Book | null) {
+  return book?.ebook ?? book?.bookEbook ?? null;
+}
+
+function bookEbookFromPublicInfo(ebookInfo: BookEbookInfo): BookEbook {
+  return {
+    bookEbookId: ebookInfo.bookEbookId,
+    bookId: ebookInfo.bookId,
+    status: ebookInfo.status,
+    format: ebookInfo.format,
+    mimeType: ebookInfo.format?.toLowerCase() === "pdf" ? "application/pdf" : null,
+    sizeBytes: ebookInfo.sizeBytes,
+    maxConcurrentLoans: ebookInfo.maxConcurrentLoans,
+    loanDurationDays: ebookInfo.loanDurationDays,
+    accessType: ebookInfo.accessType,
+    accessFee: ebookInfo.accessFee,
+    currency: ebookInfo.currency,
+    accessDurationDays: ebookInfo.accessDurationDays,
+    updatedAt: ebookInfo.updatedAt,
+  };
+}
+
 function applyCoverToBook(book: Book, coverImage: BookCoverImage): Book {
   const imageUrl = coverImage.thumbnailUrl ?? coverImage.detailUrl ?? coverImage.originalUrl ?? book.imageUrl ?? null;
 
@@ -768,8 +1329,63 @@ function applyCoverToBook(book: Book, coverImage: BookCoverImage): Book {
   };
 }
 
+function applyEbookToBook(book: Book, ebook: BookEbook): Book {
+  return {
+    ...book,
+    ebook,
+    bookEbook: ebook,
+  };
+}
+
+async function loadBookEbookManagementDetail(
+  bookId: string,
+  bookEbookId: string,
+  accessToken: string | null,
+  refreshAccessToken: () => Promise<string | null>,
+) {
+  try {
+    return await getBookEbookManagementDetail(bookId, bookEbookId, accessToken);
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      const refreshedToken = await refreshAccessToken();
+
+      if (refreshedToken) {
+        return getBookEbookManagementDetail(bookId, bookEbookId, refreshedToken);
+      }
+    }
+
+    throw error;
+  }
+}
+
+async function saveBookEbookPolicy(
+  bookId: string,
+  bookEbookId: string,
+  payload: UpdateBookEbookPayload,
+  accessToken: string | null,
+  refreshAccessToken: () => Promise<string | null>,
+) {
+  try {
+    return await updateBookEbookMetadata(bookId, bookEbookId, payload, accessToken);
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      const refreshedToken = await refreshAccessToken();
+
+      if (refreshedToken) {
+        return updateBookEbookMetadata(bookId, bookEbookId, payload, refreshedToken);
+      }
+    }
+
+    throw error;
+  }
+}
+
 function uploadCoverImage(bookId: string, file: File, shouldReplace: boolean, accessToken: string | null) {
   return shouldReplace ? updateBookCover(bookId, file, accessToken) : addBookCover(bookId, file, accessToken);
+}
+
+function isAcceptedEbookFile(file: File) {
+  return ACCEPTED_EBOOK_TYPES.has(file.type) || file.name.toLowerCase().endsWith(".pdf");
 }
 
 function getCoverUploadErrorMessage(error: unknown, role?: string | null) {
@@ -784,6 +1400,58 @@ function getCoverUploadErrorMessage(error: unknown, role?: string | null) {
   }
 
   return error instanceof Error ? error.message : "Could not upload cover image.";
+}
+
+function getEbookUploadErrorMessage(error: unknown, role?: string | null) {
+  if (error instanceof ApiError) {
+    if (error.status === 403) {
+      return `Ebook PDF upload was forbidden by the backend. Current profile role is ${role ?? "unknown"}; this API requires LIBRARIAN or ADMIN authority in the access token.`;
+    }
+
+    if (error.status === 401) {
+      return "Your session expired while uploading the ebook PDF. Please sign in again and retry.";
+    }
+
+    if (error.status >= 500) {
+      return `Backend could not store the ebook PDF. This usually means the PDF upload pipeline or Cloudinary configuration failed on the server. ${formatApiErrorDiagnostic(error)}`;
+    }
+  }
+
+  return error instanceof Error ? error.message : "Could not upload ebook PDF.";
+}
+
+function getEbookPolicyErrorMessage(error: unknown, role?: string | null) {
+  if (error instanceof ApiError) {
+    if (error.status === 403) {
+      return `Ebook policy update was forbidden by the backend. Current profile role is ${role ?? "unknown"}; this API requires LIBRARIAN or ADMIN authority in the access token.`;
+    }
+
+    if (error.status === 401) {
+      return "Your session expired while updating ebook policy. Please sign in again and retry.";
+    }
+
+    return formatApiErrorDiagnostic(error);
+  }
+
+  return error instanceof Error ? error.message : "Could not update ebook policy.";
+}
+
+function formatApiErrorDiagnostic(error: ApiError) {
+  const parts = [`Status ${error.status}`];
+
+  if (error.code) {
+    parts.push(`code ${error.code}`);
+  }
+
+  if (error.traceId) {
+    parts.push(`trace ${error.traceId}`);
+  }
+
+  if (error.message) {
+    parts.push(`message: ${error.message}`);
+  }
+
+  return parts.join(" · ");
 }
 
 function coverFileName(book: Book | null, coverImage: BookCoverImage | null) {
@@ -801,7 +1469,165 @@ function coverFileName(book: Book | null, coverImage: BookCoverImage | null) {
   return isbn ? `${isbn}_cover_primary.jpg` : "cover_primary.jpg";
 }
 
+function ebookFileName(book: Book | null, ebook: BookEbook | null) {
+  const originalFilename = ebook?.originalFilename?.trim();
+  if (originalFilename) {
+    return originalFilename.toLowerCase().endsWith(".pdf") ? originalFilename : `${originalFilename}.pdf`;
+  }
+
+  const publicName = ebook?.publicId?.split("/").pop();
+  if (publicName) {
+    return publicName.toLowerCase().endsWith(".pdf") ? publicName : `${publicName}.pdf`;
+  }
+
+  const isbn = book?.isbn?.trim();
+  return isbn ? `${isbn}_ebook.pdf` : "ebook.pdf";
+}
+
 function formatProvider(provider?: string | null) {
   if (!provider) return "Cloudinary";
   return provider.charAt(0).toUpperCase() + provider.slice(1).toLowerCase();
+}
+
+function formatEbookFormat(ebook?: BookEbook | null) {
+  const format = ebook?.format ? ebook.format.toUpperCase() : "PDF";
+  return [format, ebook?.mimeType].filter(Boolean).join(" · ");
+}
+
+function formatEbookDelivery(ebook?: BookEbook | null) {
+  const delivery = [ebook?.resourceType, ebook?.deliveryType].filter(Boolean).join(" / ");
+  return [formatProvider(ebook?.provider), delivery].filter(Boolean).join(" · ");
+}
+
+function formatEbookLoanPolicy(ebook?: BookEbook | null) {
+  const concurrentLoans =
+    typeof ebook?.maxConcurrentLoans === "number" ? `${ebook.maxConcurrentLoans} concurrent` : "Loan limit pending";
+  const duration = typeof ebook?.loanDurationDays === "number" ? `${ebook.loanDurationDays} days` : "";
+
+  return [concurrentLoans, duration].filter(Boolean).join(" · ");
+}
+
+function ebookPolicyDraftOf(ebook?: BookEbook | null): EbookPolicyDraft {
+  const accessType = ebook?.accessType?.toUpperCase() === "PAID" ? "PAID" : "FREE";
+
+  return {
+    accessType,
+    accessFee: String(ebook?.accessFee ?? 0),
+    currency: ebook?.currency || "VND",
+    accessDurationDays: String(ebook?.accessDurationDays ?? ebook?.loanDurationDays ?? 14),
+    maxConcurrentLoans: String(ebook?.maxConcurrentLoans ?? 1),
+    loanDurationDays: String(ebook?.loanDurationDays ?? ebook?.accessDurationDays ?? 14),
+    status: ebook?.status || "ACTIVE",
+  };
+}
+
+function ebookPolicyEditorKey(ebook?: BookEbook | null) {
+  if (!ebook) {
+    return "no-ebook";
+  }
+
+  return [
+    ebook.bookEbookId,
+    ebook.status,
+    ebook.accessType,
+    ebook.accessFee,
+    ebook.currency,
+    ebook.accessDurationDays,
+    ebook.maxConcurrentLoans,
+    ebook.loanDurationDays,
+    ebook.updatedAt,
+  ].join(":");
+}
+
+function ebookPolicyPayloadOf(draft: EbookPolicyDraft): UpdateBookEbookPayload {
+  const accessType = draft.accessType;
+
+  return {
+    accessType,
+    accessFee: accessType === "FREE" ? 0 : toPositiveNumber(draft.accessFee, 0),
+    currency: draft.currency || "VND",
+    accessDurationDays: toPositiveNumber(draft.accessDurationDays, 1),
+    maxConcurrentLoans: toPositiveNumber(draft.maxConcurrentLoans, 1),
+    loanDurationDays: toPositiveNumber(draft.loanDurationDays, 1),
+    status: draft.status || "ACTIVE",
+  };
+}
+
+function toPositiveNumber(value: string, fallback: number) {
+  const parsedValue = Number(value);
+
+  if (!Number.isFinite(parsedValue)) {
+    return fallback;
+  }
+
+  return Math.max(fallback, Math.trunc(parsedValue));
+}
+
+function formatEbookAccessPolicy(ebook?: BookEbook | null) {
+  const accessType = ebook?.accessType?.toUpperCase() || "FREE";
+  const fee =
+    typeof ebook?.accessFee === "number" && ebook.accessFee > 0
+      ? formatMoney(ebook.accessFee, ebook.currency)
+      : accessType === "PAID"
+        ? "Fee pending"
+        : "No fee";
+
+  return `${accessType} · ${fee}`;
+}
+
+function formatMoney(amount: number, currency?: string | null) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: currency || "VND",
+      maximumFractionDigits: currency === "VND" || !currency ? 0 : 2,
+    }).format(amount);
+  } catch {
+    return `${amount} ${currency || ""}`.trim();
+  }
+}
+
+function formatDurationDays(days?: number | null) {
+  return typeof days === "number" ? `${days} days` : "Duration pending";
+}
+
+function formatOptionalNumber(value?: number | null) {
+  return typeof value === "number" ? String(value) : "Pending";
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) {
+    return "Pending";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatFileSize(sizeBytes?: number | null) {
+  if (typeof sizeBytes !== "number") {
+    return "Size pending";
+  }
+
+  if (sizeBytes === 0) {
+    return "0 B";
+  }
+
+  const units = ["B", "KB", "MB", "GB"];
+  const unitIndex = Math.min(Math.floor(Math.log(sizeBytes) / Math.log(1024)), units.length - 1);
+  const value = sizeBytes / 1024 ** unitIndex;
+  const fractionDigits = unitIndex === 0 || value >= 10 ? 0 : 1;
+
+  return `${value.toFixed(fractionDigits)} ${units[unitIndex]}`;
 }
