@@ -24,6 +24,8 @@ import {
   firstAuthorBio,
 } from "./catalogHelpers";
 import { CatalogShell, Notice } from "./CatalogShell";
+import { BookReviewSection } from "@/features/review/components/BookReviewSection";
+import { StarRating } from "@/features/review/components/StarRating";
 
 const copy = {
   en: {
@@ -450,6 +452,24 @@ function BookDetailContent({
           <h2 className="mt-5 max-w-4xl font-serif text-5xl font-bold leading-tight text-[#0B1026] md:text-6xl">
             {book.title}
           </h2>
+          {/* Star rating summary */}
+          <div className="mt-2.5 flex items-center gap-1.5">
+            <StarRating rating={book.averageRating ?? 0} size="sm" />
+            {book.totalReviews && book.totalReviews > 0 ? (
+              <>
+                <span className="text-sm font-bold text-[#f59e0b]">
+                  {book.averageRating?.toFixed(1)}
+                </span>
+                <span className="text-xs font-semibold text-[#59637A]">
+                  ({book.totalReviews} {book.totalReviews > 1 ? "reviews" : "review"})
+                </span>
+              </>
+            ) : (
+              <span className="text-xs text-[#59637A] font-semibold">
+                (0 reviews)
+              </span>
+            )}
+          </div>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <p className="text-sm font-semibold text-[#59637A]">
               {text.by}: <span className="text-[#111827]">{authorNames}</span>
@@ -545,6 +565,8 @@ function BookDetailContent({
           </div>
         )}
       </div>
+
+      <BookReviewSection bookId={String(bookIdOf(book))} />
 
       {relatedBooks.length ? (
         <div className="mt-10 border-t border-[#E1E6F0] pt-8">
@@ -892,7 +914,20 @@ function RelatedBookCard({ book }: { book: Book }) {
       <h4 className="mt-3 line-clamp-2 text-sm font-black leading-snug text-[#111827] transition group-hover:text-[#E60028]">
         {book.title}
       </h4>
-      <p className="mt-1 line-clamp-1 text-xs font-medium text-[#6B7280]">
+      {/* Star rating */}
+      <div className="mt-1 flex items-center gap-1">
+        <StarRating rating={book.averageRating ?? 0} size="sm" />
+        {book.totalReviews && book.totalReviews > 0 ? (
+          <span className="text-[10px] font-bold text-[#f59e0b]">
+            {book.averageRating?.toFixed(1)} ({book.totalReviews})
+          </span>
+        ) : (
+          <span className="text-[10px] font-medium text-[#A0A0A0]">
+            (0)
+          </span>
+        )}
+      </div>
+      <p className="mt-1.5 line-clamp-1 text-xs font-medium text-[#6B7280]">
         {(book.authors ?? []).map(authorLabel).join(", ")}
       </p>
     </Link>
